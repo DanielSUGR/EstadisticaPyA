@@ -1,0 +1,1326 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>El valor p, mezclando</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: lección en pasos para proyectar; cada paso tiene la explicación a la izquierda y su laboratorio a la derecha; una barra fija arriba controla el experimento para toda la página */
+:root {
+  --bg: #F2F4F7;
+  --surface: #FFFFFF;
+  --ink: #161E29;
+  --muted: #566173;
+  --line: #D6DCE4;
+  --a: #2B5FA6;
+  --b: #C46A10;
+  --tail: #B8322A;
+  --bar: #9AA8BC;
+  --soft: #E7EDF5;
+  --ok: #2F7D4F;
+  --v1: #3A7D74;
+  --v2: #7A5BA6;
+  --v3: #9AA8BC;
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10141A; --surface: #18202A; --ink: #E8ECF2; --muted: #9DA9B9; --line: #2C3644;
+    --a: #7EA8E8; --b: #EE9C4A; --tail: #EF6F64; --bar: #55657C; --soft: #1F2A38; --ok: #6CC793;
+    --v1: #6CC1B5; --v2: #B39BE0; --v3: #55657C;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10141A; --surface: #18202A; --ink: #E8ECF2; --muted: #9DA9B9; --line: #2C3644;
+  --a: #7EA8E8; --b: #EE9C4A; --tail: #EF6F64; --bar: #55657C; --soft: #1F2A38; --ok: #6CC793;
+    --v1: #6CC1B5; --v2: #B39BE0; --v3: #55657C;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 17px; line-height: 1.5; }
+.wrap {
+  max-width: 1240px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+  display: flex; flex-direction: column; gap: 34px;
+}
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.1; }
+h1 { font-size: clamp(1.9rem, 4.2vw, 2.9rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.35rem, 2.6vw, 1.75rem); font-weight: 800; }
+h3 { font-size: 1.05rem; font-weight: 600; }
+p { margin: 0; }
+.eyebrow { font-family: var(--f-mono); font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+header { display: flex; flex-direction: column; gap: 10px; max-width: 62rem; }
+.lede { font-size: 1.15rem; }
+.ka { color: var(--a); font-weight: 700; }
+.kb { color: var(--b); font-weight: 700; }
+.kt { color: var(--tail); font-weight: 700; }
+.kok { color: var(--ok); font-weight: 700; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+
+/* Barra de control */
+.bar-ctl { display: flex; flex-wrap: wrap; gap: 14px 26px; align-items: flex-end; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px; z-index: 5; }
+@media (min-width: 900px) { .bar-ctl { position: sticky; top: env(safe-area-inset-top, 0px); box-shadow: 0 6px 18px -14px var(--ink); } }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.ctl { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.ctl-label { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+button { font: inherit; cursor: pointer; }
+.seg button, .btn {
+  font-size: 0.93rem; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+  border-radius: 999px; padding: 6px 13px; transition: border-color .15s, background .15s;
+}
+.seg button { font-family: var(--f-mono); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.seg button:hover, .btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); font-weight: 700; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--a); outline-offset: 2px; }
+nav.steps { display: flex; flex-wrap: wrap; gap: 6px; }
+nav.steps a { font-family: var(--f-mono); font-size: 0.85rem; text-decoration: none; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 5px 9px; background: var(--bg); }
+nav.steps a:hover { border-color: var(--muted); }
+
+/* Pasos */
+section.step { display: grid; grid-template-columns: 1fr; gap: 20px; scroll-margin-top: 120px; }
+@media (min-width: 980px) { section.step { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); align-items: start; } }
+.explain { display: flex; flex-direction: column; gap: 12px; min-width: 0; max-width: 36rem; }
+.explain p { color: var(--ink); }
+.explain .muted { color: var(--muted); }
+.step-tag { font-family: var(--f-mono); font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--tail); }
+.formula { font-family: var(--f-mono); background: var(--soft); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; font-size: 0.98rem; font-variant-numeric: tabular-nums; }
+.formula b { color: var(--tail); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.panel { display: flex; flex-direction: column; gap: 6px; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; }
+.big { font-family: var(--f-mono); font-size: 1.02rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.note { color: var(--muted); font-size: 0.92rem; }
+canvas { display: block; width: 100%; }
+.h150 { height: 150px; } .h170 { height: 170px; } .h200 { height: 200px; } .h240 { height: 240px; } .h260 { height: 260px; } .h120 { height: 120px; } .h90 { height: 90px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.stat { border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stat .k { font-size: 0.8rem; color: var(--muted); }
+.stat .v { font-family: var(--f-mono); font-size: 1.15rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat .t { font-family: var(--f-mono); font-size: 0.78rem; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.86rem; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.result { display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; align-items: center; background: var(--soft); border-radius: 12px; padding: 14px 16px; }
+.pval { font-family: var(--f-display); font-weight: 800; font-size: clamp(1.8rem, 3.6vw, 2.5rem); line-height: 1; font-variant-numeric: tabular-nums; grid-row: span 2; }
+.pval.sig { color: var(--tail); }
+.result .count { font-family: var(--f-mono); font-size: 0.88rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.result .decision { font-weight: 700; }
+.reading b { font-variant-numeric: tabular-nums; }
+.tline { font-size: 0.9rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.toggle input { accent-color: var(--a); width: 16px; height: 16px; }
+.pair { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; }
+.pcard { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pcard .v { font-family: var(--f-mono); font-size: 1.3rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pcard.win { border-color: var(--ok); box-shadow: inset 0 0 0 1px var(--ok); }
+.vs { font-family: var(--f-mono); color: var(--muted); }
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--f-mono); font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 400; }
+td { font-family: var(--f-mono); }
+tr.hl td { background: var(--soft); font-weight: 600; }
+.chain { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 900px) { .chain { grid-template-columns: repeat(3, 1fr); } }
+.link { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.link .n { font-family: var(--f-mono); font-size: 0.78rem; color: var(--tail); }
+.link .q { font-weight: 700; }
+.link .a { color: var(--muted); font-size: 0.93rem; }
+.deriv { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 8px; }
+.deriv li::marker { font-family: var(--f-mono); color: var(--tail); }
+input[type=range] { width: 100%; accent-color: var(--ok); }
+.explain h3 { margin-top: 4px; }
+.phibox { background: var(--soft); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 9px; }
+.phibox p { font-size: 0.97rem; }
+table.phitab th, table.phitab td { text-align: center; padding: 4px 6px; }
+table.phitab td:first-child, table.phitab th:first-child { text-align: left; }
+ul.params { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 0.95rem; }
+ul.params b { color: var(--ink); font-family: var(--f-mono); }
+ul.clean { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
+ul.clean li { padding-left: 18px; position: relative; }
+ul.clean li::before { content: ""; position: absolute; left: 0; top: 0.55em; width: 8px; height: 8px; border-radius: 2px; background: var(--tail); }
+ul.clean li span { color: var(--muted); }
+hr.sep { border: 0; border-top: 1px solid var(--line); margin: 0; }
+footer { color: var(--muted); font-size: 0.86rem; border-top: 1px solid var(--line); padding-top: 14px; }
+</style>
+<style>
+/* Reinicio mínimo para usar el archivo fuera de claude.ai */
+html, body { margin: 0; } [hidden] { display: none !important; } img { max-width: 100%; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Del dato al valor p, paso a paso</span>
+    <h1>El valor p, mezclando</h1>
+    <p class="lede">¿Sacan mejores notas los estudiantes con un método de enseñanza distinto del habitual? Comparamos la nota final (de 0 a 10) de un grupo <span class="ka">A, con el método habitual</span>, y de otro <span class="kb">B, con el método nuevo</span>, y seguimos el camino completo, desde los puntos de la nota hasta el valor p.</p>
+  </header>
+
+  <div class="bar-ctl">
+    <div class="ctl">
+      <span class="ctl-label" id="lbl-d">Efecto real del método en la población</span>
+      <div class="seg" id="seg-d" role="group" aria-labelledby="lbl-d"></div>
+    </div>
+    <div class="ctl">
+      <span class="ctl-label" id="lbl-n">Estudiantes por grupo (n)</span>
+      <div class="seg" id="seg-n" role="group" aria-labelledby="lbl-n"></div>
+    </div>
+    <div class="ctl">
+      <span class="ctl-label">Experimento</span>
+      <div class="actions"><button class="btn primary" id="btn-new" type="button">Nuevo experimento</button></div>
+    </div>
+    <div class="ctl">
+      <span class="ctl-label">Ir al paso</span>
+      <nav class="steps" aria-label="Pasos">
+        <a href="#paso1">1</a><a href="#paso2">2</a><a href="#repaso">z</a><a href="#paso3">3</a><a href="#paso4">4</a><a href="#paso5">5</a><a href="#paso6">6</a><a href="#paso7">7</a><a href="#paso8">8</a><a href="#paso9">9</a><a href="#paso10">10</a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- PASO 1 -->
+  <section class="step" id="paso1">
+    <div class="explain">
+      <span class="step-tag">Paso 1 · Entre grupos</span>
+      <h2>Los datos, en puntos de nota</h2>
+      <p>Cada punto es un estudiante. Una nota más alta es mejor. En la población, con el método habitual la nota media es de 6 con una desviación típica de 1,5 puntos. <span id="t1-pop"></span></p>
+      <p>Lo primero que miramos es la <b>diferencia entre medias</b>, en las mismas unidades que los datos. La llamamos mejora, nota de B menos nota de A. Si es positiva, el grupo con el método nuevo sacó más nota.</p>
+      <p>Fíjate en la forma. Casi todas las notas se agrupan entre el 5 y el 8, y unas pocas son muy bajas (quien apenas estudió o dejó el examen a medias). No tienen forma de campana.</p>
+      <p class="muted">Suponemos que cada estudiante se asigna al azar a un método, uno a uno. Si en lugar de eso comparamos dos clases enteras, una con cada método, los estudiantes de una misma clase comparten profesor, horario y ambiente, y ya no son observaciones independientes. Entonces el método se confunde con todo lo demás que tiene esa clase, y la unidad que cuenta es la clase, no el estudiante.</p>
+      <p class="muted">Pulsa “Nuevo experimento” varias veces. Con las mismas poblaciones, la diferencia cambia en cada muestra. Volveremos a esto en el paso 4.</p>
+    </div>
+    <div class="card">
+      <canvas id="c-data" class="h170" aria-label="Notas de los grupos A y B con sus medias"></canvas>
+      <div class="stats">
+        <div class="stat"><span class="k">Media A, método habitual</span><span class="v" id="s1-ma">–</span><span class="t" id="s1-sa"></span></div>
+        <div class="stat"><span class="k">Media B, método nuevo</span><span class="v" id="s1-mb">–</span><span class="t" id="s1-sb"></span></div>
+        <div class="stat"><span class="k">Mejora (B − A)</span><span class="v" id="s1-diff">–</span><span class="t">el efecto en bruto</span></div>
+      </div>
+    </div>
+  </section>
+  <hr class="sep">
+
+  <!-- PASO 2 -->
+  <section class="step" id="paso2">
+    <div class="explain">
+      <span class="step-tag">Paso 2 · Tamaño del efecto</span>
+      <h2>De puntos a d de Cohen</h2>
+      <p><span id="t2-q"></span> Depende de cuánto varían los estudiantes entre sí. Si sus notas difieren en varios puntos, <span id="t2-ms"></span> es poco. Si apenas difieren, es mucho.</p>
+      <p>La d de Cohen mide la diferencia con la regla de la propia variabilidad, es decir, cuántas desviaciones típicas separan las dos medias.</p>
+      <div class="formula">
+        <span>d = (media B − media A) / DE agrupada</span>
+        <span id="f2">d = – / – = <b>–</b></span>
+      </div>
+      <p>La <b>DE agrupada</b> resume en un solo número cuánto varían los estudiantes dentro de los dos grupos. No se promedian las desviaciones típicas, sino las varianzas (las DE al cuadrado), y después se saca la raíz.</p>
+      <div class="formula">
+        <span>DE agrupada = √((DE<sub>A</sub>² + DE<sub>B</sub>²) / 2)</span>
+        <span id="f2sp">= –</span>
+      </div>
+      <p class="muted">Esta versión vale cuando los dos grupos tienen el mismo n. Con tamaños distintos, cada varianza pesa según sus grados de libertad, DE agrupada = √(((n<sub>A</sub> − 1)·DE<sub>A</sub>² + (n<sub>B</sub> − 1)·DE<sub>B</sub>²) / (n<sub>A</sub> + n<sub>B</sub> − 2)). Es la desviación típica de los estudiantes, no la de las medias.</p>
+      <p class="muted">Esa DE no mide solo cuánto saben unos estudiantes más que otros. También recoge que cada uno rinde distinto según el día y que el propio examen mide con error. Lo desmontamos en el <a href="#paso8">paso 8</a>.</p>
+      <p class="muted">Al quitar las unidades, se pueden comparar estudios que miden cosas distintas (notas, milisegundos, puntos de una escala). Es lo que hace un metaanálisis. Cohen propuso 0,2, 0,5 y 0,8 como efectos pequeño, mediano y grande, pero son solo orientativos.</p>
+    </div>
+    <div class="card">
+      <canvas id="c-d" class="h240" aria-label="Las dos distribuciones y la diferencia expresada en desviaciones típicas"></canvas>
+      <div class="legend"><span><i style="background:var(--a)"></i>A, método habitual</span><span><i style="background:var(--b)"></i>B, método nuevo</span><span>Arriba, la forma suavizada de tus datos. Abajo, la diferencia y una desviación típica dibujadas con la misma regla.</span></div>
+    </div>
+  </section>
+  <hr class="sep">
+
+  <!-- REPASO -->
+  <section class="step" id="repaso">
+    <div class="explain">
+      <span class="step-tag">Repaso · Antes del paso 3</span>
+      <h2>La normal, la z y Φ, para no perderse</h2>
+      <h3>1. La normal es la campana</h3>
+      <p>Muchas medidas se reparten así. La mayoría de los valores se amontonan cerca de la media y, cuanto más te alejas, menos casos hay, igual por los dos lados. Piensa en la estatura de los hombres adultos, con una media de unos 175 cm y una desviación típica de 7 cm.</p>
+      <p>Cada campana queda definida por dos números, <b>dónde está el centro</b> (la media) y <b>lo ancha que es</b> (la DE). Y siempre se cumple la misma regla. Entre la media ± 1 DE está el 68 % de la gente, y entre ± 2 DE, el 95 %.</p>
+      <h3>2. La z mide todo con la misma regla</h3>
+      <p>Cada variable tiene su campana (centímetros, milisegundos, puntos de una nota). Para usar una sola, medimos <b>a cuántas desviaciones típicas está un valor del centro</b>.</p>
+      <div class="formula"><span>z = (valor − media) / DE</span><span>182 cm → (182 − 175) / 7 = <b>1</b></span></div>
+      <p>Si convertimos todos los valores a z, la campana resultante siempre tiene media 0 y DE 1, sea cual sea la variable. Es la <b>normal estándar</b>.</p>
+      <h3>3. Φ es el percentil</h3>
+      <p>Φ(z) es la proporción de la gente que queda por debajo de z, lo mismo que el percentil de las tablas del pediatra. “Función de distribución” solo significa eso, la proporción acumulada por debajo de un valor.</p>
+      <h3>4. Para qué la usamos en el paso 3</h3>
+      <p id="rep-use"></p>
+      <p class="muted">En una frase. La z dice a cuántas desviaciones típicas está un valor del centro, y Φ(z) dice qué porcentaje queda por debajo, igual que un percentil.</p>
+    </div>
+    <div class="card">
+      <div class="panel">
+        <div class="panel-head"><h3>Mueve la estatura</h3><span class="big" id="h-val"></span></div>
+        <input type="range" id="rng-h" min="154" max="196" step="1" value="182" aria-label="Estatura en centímetros">
+        <canvas id="c-height" class="h260" aria-label="Campana de estaturas con escala en centímetros y en z y el área por debajo de la estatura elegida"></canvas>
+        <div class="legend"><span><i style="background:var(--ok)"></i>gente más baja que tú, Φ(z)</span><span>Arriba, la regla del 68 % y del 95 %. Debajo, la misma campana en centímetros y en z.</span></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="k">Tu estatura</span><span class="v" id="h-cm">–</span><span class="t">media 175 cm, DE 7 cm</span></div>
+        <div class="stat"><span class="k">Tu z</span><span class="v" id="h-z">–</span><span class="t" id="h-zt"></span></div>
+        <div class="stat"><span class="k">Φ(z), tu percentil</span><span class="v" id="h-phi">–</span><span class="t" id="h-phit"></span></div>
+      </div>
+      <p class="note">Ejemplo con valores aproximados. Prueba 175 cm (z = 0, percentil 50), 168 cm (z = −1, percentil 16) y 189 cm (z = 2, percentil 98).</p>
+    </div>
+  </section>
+  <hr class="sep">
+
+  <!-- PASO 3 -->
+  <section class="step" id="paso3">
+    <div class="explain">
+      <span class="step-tag">Paso 3 · Qué significa d</span>
+      <h2>La probabilidad de superioridad</h2>
+      <p><span id="t3-d"></span> Hay una traducción más intuitiva. Si elijo al azar un estudiante de cada grupo, ¿con qué probabilidad el del método nuevo saca más nota?</p>
+      <div class="formula">
+        <span>PS ≈ Φ(d / √2)</span>
+        <span style="font-family:var(--f-body);font-size:0.9rem">si los datos son aproximadamente normales</span>
+        <span id="f3">con d = –, PS = <b>–</b></span>
+      </div>
+      <aside class="phibox" aria-labelledby="phi-title">
+        <h3 id="phi-title">¿Qué es Φ (fi)?</h3>
+        <p>Φ es la <b>función de distribución de la normal estándar</b>. La normal estándar es la campana con media 0 y desviación típica 1, la de la tabla z del final de los manuales.</p>
+        <p>Le das un valor z y Φ(z) te devuelve el <b>área de la campana a la izquierda de z</b>, es decir, la proporción de valores menores que z.</p>
+        <canvas id="c-phi" class="h120" aria-label="Campana normal estándar con el área a la izquierda de z sombreada"></canvas>
+        <table class="phitab"><thead><tr><th>z</th><th>−1</th><th>0</th><th>0,5</th><th>1</th><th>2</th></tr></thead>
+        <tbody><tr><td>Φ(z)</td><td>16 %</td><td>50 %</td><td>69 %</td><td>84 %</td><td>98 %</td></tr></tbody></table>
+        <p class="muted">En la probabilidad de superioridad, z = d / √2, y Φ(z) es la proporción de parejas que gana el estudiante del método nuevo. Por qué es así lo explican los cuatro pasos siguientes. Si necesitas repasar la z y Φ, vuelve a la <a href="#repaso">sección de repaso</a>.</p>
+      </aside>
+      <h3>¿De dónde sale la fórmula?</h3>
+      <ol class="deriv">
+        <li><b>Una pareja al azar.</b> Tomamos un estudiante de A y otro de B y restamos sus notas. A esa resta la llamamos R (R = nota de B − nota de A), y se mide en puntos. <span id="dv-0"></span> El estudiante de B gana si R es mayor que 0.</li>
+        <li><b>El centro de R.</b> Cada pareja tiene su R. La media de todas ellas coincide con la diferencia entre las medias de los grupos, <b class="mono" id="dv-1"></b>. Todavía no hay nada estandarizado, todo está en puntos.</li>
+        <li><b>La anchura de R.</b> Al restar dos estudiantes se juntan dos fuentes de variabilidad, la de cada uno. Las varianzas se suman (σ² + σ² = 2σ²), así que la desviación típica de R es σ × √2 = <b class="mono" id="dv-2"></b>. De ahí sale el √2.</li>
+        <li><b>La proporción por encima de 0.</b> Si R es aproximadamente normal, las parejas que gana B son el área de su campana a la derecha de 0 (verde en el gráfico de la derecha). Si medimos en desviaciones típicas de R, el centro está a z = diferencia / (σ√2) por encima del 0, y esa área es Φ(z), como en el recuadro de Φ. Como diferencia / σ es la d de Cohen, z = d / √2. <span id="dv-3"></span></li>
+      </ol>
+      <ul class="params">
+        <li><b>d</b> es la diferencia entre medias expresada en desviaciones típicas (paso 2).</li>
+        <li><b>σ</b> es la desviación típica de cada grupo, es decir, cuánto difieren los estudiantes entre sí.</li>
+        <li><b>√2</b> aparece porque la diferencia entre dos estudiantes varía más que un solo estudiante.</li>
+        <li><b>R</b> es la resta de las notas de una pareja, en puntos. No es la d de Cohen.</li>
+        <li><b>Φ</b> es el área de la normal estándar a la izquierda de z (recuadro de arriba).</li>
+      </ul>
+      <p>Si no hubiera efecto, sería 50 %, como tirar una moneda. Fíjate en lo poco que se aleja del 50 % un efecto “pequeño”.</p>
+      <div class="tbl-wrap"><table id="tbl-ps">
+        <thead><tr><th>d</th><th>PS si normales</th><th>Lectura</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <p class="muted">La fórmula y la tabla suponen normalidad. Nuestras notas son asimétricas, y aun así el valor real de la población (a la derecha) se parece mucho. El recuento de todas las parejas posibles no necesita ningún supuesto. En la literatura en inglés se llama <i>common language effect size</i>.</p>
+    </div>
+    <div class="card">
+      <div class="panel">
+        <div class="panel-head"><h3>Elige parejas al azar de tus datos</h3><span class="big" id="pair-count">0 parejas</span></div>
+        <div class="pair">
+          <div class="pcard" id="pc-a"><span class="note">Estudiante de A</span><span class="v" id="pv-a">–</span></div>
+          <span class="vs">frente a</span>
+          <div class="pcard" id="pc-b"><span class="note">Estudiante de B</span><span class="v" id="pv-b">–</span></div>
+        </div>
+        <div class="actions"><button class="btn primary" id="btn-p1" type="button">Elegir una pareja</button><button class="btn" id="btn-p1k" type="button">Elegir 1.000</button><button class="btn" id="btn-p0" type="button">Borrar</button></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>La diferencia entre dos estudiantes al azar</h3><span class="big" id="psd-txt"></span></div>
+        <canvas id="c-psd" class="h200" aria-label="Distribución de las diferencias entre un estudiante de B y uno de A, con el área a la derecha de cero sombreada"></canvas>
+        <div class="legend"><span><i style="background:var(--bar)"></i>todas las parejas posibles de tus datos</span><span><i style="background:var(--ok)"></i>área a la derecha de 0, la PS</span><span>La curva es la normal con centro en tu diferencia y DE σ√2.</span></div>
+      </div>
+      <canvas id="c-ps" class="h150" aria-label="Proporción acumulada de parejas en las que saca más nota el estudiante del método nuevo"></canvas>
+      <div class="stats">
+        <div class="stat"><span class="k">Parejas al azar en que B saca más nota</span><span class="v" id="s3-emp">–</span></div>
+        <div class="stat"><span class="k">Todas las parejas posibles de tus datos</span><span class="v" id="s3-all">–</span></div>
+        <div class="stat"><span class="k">En la población (simulado)</span><span class="v" id="s3-pop">–</span><span class="t" id="s3-popt"></span></div>
+      </div>
+    </div>
+  </section>
+  <hr class="sep">
+
+  <!-- PASO 4 -->
+  <section class="step" id="paso4">
+    <div class="explain">
+      <span class="step-tag">Paso 4 · Teorema central del límite</span>
+      <h2>Tu experimento es uno de muchos posibles</h2>
+      <p>Con otros estudiantes, la diferencia habría salido distinta. Si repitiéramos el experimento muchas veces, ¿cómo se repartirían las diferencias?</p>
+      <p>El teorema central del límite responde que formarían una <b>campana</b> centrada en el efecto real, con una anchura (el <b>error típico</b>) que se puede calcular de antemano.</p>
+      <div class="formula">
+        <span>centro = efecto real</span>
+        <span>error típico = DE × √(2/n)</span>
+        <span id="f4">= 1,5 × √(2/–) = <b>– puntos</b></span>
+      </div>
+      <p>Fíjate en que las notas del paso 1 no tienen forma de campana, y las diferencias de medias sí. Eso es lo que dice el teorema. Con n = 10 todavía queda algo de asimetría, que desaparece al aumentar n.</p>
+      <p class="muted">Prueba n = 10. La campana es tan ancha que una parte importante de las repeticiones da una mejora nula o negativa aunque el método nuevo funcione (mira el último recuadro). Por eso no basta con mirar la diferencia y hace falta un contraste.</p>
+    </div>
+    <div class="card">
+      <div class="panel">
+        <div class="panel-head"><h3>Repetir el experimento con estudiantes nuevos</h3><span class="big" id="rep4-k">0 repeticiones</span></div>
+        <canvas id="c-clt" class="h240" aria-label="Histograma de las diferencias de muchos experimentos repetidos"></canvas>
+        <div class="legend"><span><i style="background:var(--a)"></i>diferencias de las repeticiones</span><span><i style="background:var(--tail)"></i>tu experimento</span><span>La línea discontinua marca el efecto real y la curva, lo que predice el teorema.</span></div>
+      </div>
+      <div class="actions"><button class="btn primary" id="btn-c1" type="button">Repetir 1 vez</button><button class="btn" id="btn-c100" type="button">Repetir 100</button><button class="btn" id="btn-c1k" type="button">Repetir 1.000</button><button class="btn" id="btn-c0" type="button">Borrar</button></div>
+      <div class="stats">
+        <div class="stat"><span class="k">Centro de las repeticiones</span><span class="v" id="s4-m">–</span><span class="t" id="s4-mt"></span></div>
+        <div class="stat"><span class="k">Anchura (DE de las diferencias)</span><span class="v" id="s4-sd">–</span><span class="t" id="s4-sdt"></span></div>
+        <div class="stat"><span class="k">Repeticiones con mejora ≤ 0</span><span class="v" id="s4-neg">–</span></div>
+      </div>
+    </div>
+  </section>
+  <hr class="sep">
+
+  <!-- PASO 5 -->
+  <section class="step" id="paso5">
+    <div class="explain">
+      <span class="step-tag">Paso 5 · El contraste</span>
+      <h2>El valor p, mezclando</h2>
+      <p>En la vida real no podemos repetir el experimento mil veces ni conocemos el efecto real. Lo que sí podemos hacer es preguntarnos qué pasaría <b>si el método no importara</b>.</p>
+      <p>En ese caso, las etiquetas A y B serían arbitrarias. Mezclamos los datos, los repartimos al azar en dos grupos y calculamos la diferencia. Repetido miles de veces, eso nos da la distribución de diferencias que produce el puro azar, la <b>distribución nula</b>.</p>
+      <p>La p es la proporción de mezclas que dan una diferencia tan grande como la tuya o mayor, en cualquier dirección.</p>
+      <p class="muted">El teorema central del límite vuelve a aparecer aquí. La distribución nula también es una campana, centrada en 0 y con casi la misma anchura que la del paso 4. La t de Student usa esa campana en lugar de mezclar. Actívala debajo del histograma.</p>
+    </div>
+    <div class="card">
+      <div class="panel">
+        <div class="panel-head"><h3>Una mezcla al azar</h3><span class="big" id="mix-txt"></span></div>
+        <canvas id="c-mix" class="h170" aria-label="Los mismos datos repartidos al azar entre A y B"></canvas>
+        <div class="legend"><span><i style="background:var(--a)"></i>venía de A</span><span><i style="background:var(--b)"></i>venía de B</span><span>Las filas se reparten al azar.</span></div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="btn-m1" type="button">Mezclar 1 vez</button>
+        <button class="btn" id="btn-m100" type="button">Mezclar 100</button>
+        <button class="btn" id="btn-m10k" type="button">Mezclar 10.000</button>
+        <button class="btn" id="btn-clear" type="button">Borrar mezclas</button>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>La distribución nula</h3></div>
+        <canvas id="c-null" class="h260" aria-label="Histograma de las diferencias obtenidas al mezclar, con la diferencia observada marcada"></canvas>
+        <div class="legend"><span><i style="background:var(--bar)"></i>diferencias de las mezclas</span><span><i style="background:var(--tail)"></i>tan extremas o más que la tuya</span></div>
+      </div>
+      <div class="result" aria-live="polite">
+        <span class="pval" id="p-big">p = –</span>
+        <span class="count" id="p-count"></span>
+        <span class="decision" id="p-dec"></span>
+      </div>
+      <p class="reading" id="reading"></p>
+      <div class="tline">
+        <label class="toggle" for="chk-t"><input type="checkbox" id="chk-t"> Superponer la campana de la t de Student</label>
+        <span id="t-txt"></span>
+      </div>
+    </div>
+  </section>
+  <hr class="sep">
+
+  <!-- PASO 6 -->
+  <section class="step" id="paso6">
+    <div class="explain">
+      <span class="step-tag">Paso 6 · Repetir el contraste</span>
+      <h2>Falsos positivos y potencia</h2>
+      <p>Hagamos muchos experimentos completos, cada uno con su p. Cada barra es un experimento, en rojo si p &lt; 0,05.</p>
+      <p>Con un efecto real de 0 puntos, alrededor del 5 % de los experimentos sale significativo igualmente. Son <b>falsos positivos</b>, y es exactamente lo que significa α = 0,05.</p>
+      <p>Con un efecto real, el porcentaje de experimentos significativos es la <b>potencia</b>. Con un efecto pequeño (0,3 puntos, d = 0,2) y 10 estudiantes por grupo, casi nunca se detecta.</p>
+      <p class="muted">Mira también la mejora media de los experimentos significativos. Con poca potencia es mayor que la real, porque solo salen significativos los que exageraron el efecto por azar.</p>
+    </div>
+    <div class="card">
+      <div class="actions">
+        <button class="btn primary" id="btn-r1" type="button">Hacer 1 experimento</button>
+        <button class="btn" id="btn-r100" type="button">Hacer 100</button>
+        <button class="btn" id="btn-rclear" type="button">Borrar</button>
+      </div>
+      <canvas id="c-reps" class="h170" aria-label="Valores p de los experimentos repetidos"></canvas>
+      <div class="stats">
+        <div class="stat"><span class="k">Experimentos</span><span class="v" id="r-k">0</span><span class="t">p con 2.000 mezclas cada uno</span></div>
+        <div class="stat"><span class="k">Con p &lt; 0,05</span><span class="v" id="r-sig">–</span></div>
+        <div class="stat"><span class="k">Mejora media en los significativos a favor del método nuevo</span><span class="v" id="r-eff">–</span><span class="t" id="r-efft"></span></div>
+      </div>
+      <p id="r-msg"></p>
+    </div>
+  </section>
+  <hr class="sep">
+
+  <!-- PASO 7 -->
+  <section class="step" id="paso7">
+    <div class="explain">
+      <span class="step-tag">Paso 7 · Intrasujeto</span>
+      <h2>Los mismos estudiantes, con los dos métodos</h2>
+      <p>Ahora cada estudiante aprende un tema con el método habitual y otro tema con el método nuevo, y le ponemos una nota en cada uno. Analizamos la <b>diferencia de cada estudiante</b>, su nota con el método nuevo menos su nota con el habitual. Cada estudiante es su propio control, así que desaparecen las diferencias entre estudiantes, que suelen ser la mayor fuente de variabilidad.</p>
+      <p>Cuánto se gana depende de la correlación entre las dos notas de un mismo estudiante (r). Cuanto más se parecen, más pequeña es la variabilidad de las diferencias.</p>
+      <div class="formula">
+        <span>d<sub>z</sub> = media de las diferencias / DE de las diferencias</span>
+        <span>d<sub>av</sub> = media de las diferencias / DE media de las condiciones</span>
+        <span>PS intrasujeto ≈ Φ(d<sub>z</sub>), si las diferencias son aproximadamente normales</span>
+      </div>
+      <p class="muted">d<sub>av</sub> se puede comparar con la d entre grupos. d<sub>z</sub> no, porque crece con r. Con r = 0,8 es unas 1,6 veces mayor para el mismo efecto en puntos. La PS intrasujeto se lee de otra manera, como la probabilidad de que un estudiante elegido al azar saque más nota con el método nuevo.</p>
+      <p>Esta ventaja tiene un precio. Los dos temas no son igual de difíciles, y el segundo se aprende con más rodaje en la asignatura. Hay que contrabalancear, es decir, que la mitad de los estudiantes aprenda el primer tema con el método nuevo y la otra mitad el segundo. Sin contrabalanceo, la “mejora” podría deberse a que el tema era más fácil. Y queda un riesgo que el contrabalanceo no quita, que lo aprendido con un método se contagie al otro (efecto de arrastre).</p>
+      <p class="muted">Mezclar aquí es otra cosa. Si el método no importara, daría igual cuál de las dos notas de cada estudiante llamamos A y cuál B. La mezcla consiste en dar la vuelta al azar al signo de la diferencia de cada estudiante.</p>
+    </div>
+    <div class="card">
+      <div class="ctl">
+        <span class="ctl-label" id="lbl-r">Correlación entre las dos notas de un estudiante (r)</span>
+        <div class="seg" id="seg-r" role="group" aria-labelledby="lbl-r"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Cada línea es un estudiante</h3><span class="big" id="w-n"></span></div>
+        <canvas id="c-slope" class="h240" aria-label="Nota de cada estudiante con el método habitual y con el nuevo unidas por una línea"></canvas>
+        <div class="legend"><span><i style="background:var(--ok)"></i>mejora con el método nuevo</span><span><i style="background:var(--bar)"></i>no mejora</span><span>línea gruesa: medias</span></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Las diferencias, y una mezcla con los signos al azar</h3><span class="big" id="w-mix"></span></div>
+        <canvas id="c-wdiff" class="h170" aria-label="Diferencias de cada estudiante y una versión con los signos invertidos al azar"></canvas>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="btn-w1" type="button">Mezclar signos 1 vez</button>
+        <button class="btn" id="btn-w10k" type="button">Mezclar 10.000</button>
+        <button class="btn" id="btn-wnew" type="button">Nuevo experimento intrasujeto</button>
+      </div>
+      <canvas id="c-wnull" class="h200" aria-label="Distribución nula intrasujeto con la diferencia media observada"></canvas>
+      <div class="stats">
+        <div class="stat"><span class="k">Mejora media</span><span class="v" id="w-m">–</span></div>
+        <div class="stat"><span class="k">d<sub>z</sub> / d<sub>av</sub></span><span class="v" id="w-d">–</span></div>
+        <div class="stat"><span class="k">Estudiantes que mejoran</span><span class="v" id="w-ps">–</span><span class="t" id="w-pst"></span></div>
+        <div class="stat"><span class="k">p (mezclando signos)</span><span class="v" id="w-p">–</span><span class="t" id="w-pt"></span></div>
+      </div>
+      <p id="w-cmp"></p>
+    </div>
+  </section>
+  <hr class="sep">
+
+  <!-- PASO 8 -->
+  <section class="step" id="paso8">
+    <div class="explain">
+      <span class="step-tag">Paso 8 · Fuentes de variabilidad</span>
+      <h2>¿De dónde sale la variabilidad?</h2>
+      <p>Hasta ahora, la DE de 1,5 puntos era un dato. Pero una nota no mide solo lo que sabe un estudiante. Mezcla tres cosas.</p>
+      <ul class="params">
+        <li><b>Nivel</b>. Lo que de verdad sabe cada estudiante, que cambia poco de un día a otro. Las diferencias de nivel entre estudiantes tienen una DE de σ<sub>niv</sub> = 1,2 puntos.</li>
+        <li><b>Día</b>. La variabilidad intraindividual. El mismo estudiante no rinde igual todos los días (cómo ha dormido, los nervios, lo que repasó la víspera). DE de σ<sub>día</sub> = 0,6 puntos de un examen a otro.</li>
+        <li><b>Examen</b>. El error de medida del instrumento. Un examen es una muestra de preguntas, y con otras preguntas, o con otro corrector, la nota cambiaría. Cada pregunta, por separado, tiene un error de σ<sub>err</sub> = 2,12 puntos.</li>
+      </ul>
+      <div class="formula">
+        <span>nota = nivel + día + error del examen</span>
+        <span>DE² = σ<sub>niv</sub>² + σ<sub>día</sub>²/m + σ<sub>err</sub>²/(k·m)</span>
+        <span id="f8"></span>
+      </div>
+      <ul class="params">
+        <li><b>k</b> es el número de preguntas de cada examen, y <b>m</b>, el número de exámenes que se promedian para la nota final (evaluación continua).</li>
+        <li>Las varianzas se suman por lo mismo que en el paso 3, porque son fuentes independientes.</li>
+        <li>Se dividen por k y por m por lo mismo que en el paso 4. Al promediar k preguntas, sus errores se compensan en parte, y la varianza del promedio es la de una pregunta dividida por k.</li>
+      </ul>
+      <p>La <b>fiabilidad</b> es la parte de la varianza de las notas que se debe a diferencias reales de nivel, σ<sub>niv</sub>² / DE². <span id="t8-rel"></span></p>
+      <p class="muted">Esta es la fiabilidad test-retest, la que importa al comparar exámenes de días distintos, porque cuenta los altibajos del día como ruido. El alfa de Cronbach de Psicometría (consistencia interna) mira un solo examen, cuenta el estado del día como señal y por eso sale más alta, (σ<sub>niv</sub>² + σ<sub>día</sub>²) / DE² = 0,80 con k = 10 y m = 1.</p>
+      <p class="muted">Dividir por k supone que los errores de las preguntas son independientes. En un examen real suelen estar algo correlacionados (preguntas parecidas, un mismo corrector), y alargar el examen mejora menos de lo que dice la fórmula.</p>
+      <p class="muted">Los pasos 1 a 7 usan k = 10 y m = 1, que dan la DE de 1,5 puntos.</p>
+
+      <h3>¿Puede el error de medida inventar un efecto?</h3>
+      <p>Si es <b>aleatorio</b>, no. Sube y baja notas al azar en los dos grupos por igual, así que no mueve la diferencia de medias, solo ensancha las campanas. Ese error ya está dentro de la DE de los datos, y por tanto dentro del error típico y de la p. Con un efecto real de 0, sigue saliendo significativo el 5 % de los experimentos. Lo que sí hace es <b>esconder</b> efectos, porque la misma diferencia en puntos da una d más pequeña y menos potencia.</p>
+      <p>Si es <b>sistemático</b>, sí. Si los exámenes del grupo B los corrige un profesor más generoso, aparece una diferencia aunque el método no haga nada, y con más estudiantes se detecta con más seguridad. Ninguna p protege de eso. Pasa lo mismo si el profesor que estrena el método nuevo está más motivado, si los estudiantes de B saben que están probando algo nuevo y se esfuerzan más, o si cada método se da en una clase distinta (paso 1). Solo lo evita el diseño, con estudiantes asignados al azar, el mismo profesor, el mismo examen, el mismo corrector y corrección a ciegas.</p>
+    </div>
+    <div class="card">
+      <div class="ctl">
+        <span class="ctl-label" id="lbl-k">Preguntas por examen (k)</span>
+        <div class="seg" id="seg-k" role="group" aria-labelledby="lbl-k"></div>
+      </div>
+      <div class="ctl">
+        <span class="ctl-label" id="lbl-m">Exámenes que se promedian (m)</span>
+        <div class="seg" id="seg-m" role="group" aria-labelledby="lbl-m"></div>
+      </div>
+      <div class="ctl">
+        <span class="ctl-label" id="lbl-bias">Corrección de los exámenes</span>
+        <div class="seg" id="seg-bias" role="group" aria-labelledby="lbl-bias"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>De qué está hecha la varianza de las notas</h3><span class="big" id="v-de"></span></div>
+        <canvas id="c-var" class="h90" aria-label="Barra con la varianza de las notas repartida entre nivel, día y examen"></canvas>
+        <div class="legend"><span><i style="background:var(--v1)"></i>nivel (entre estudiantes)</span><span><i style="background:var(--v2)"></i>día (intraindividual)</span><span><i style="background:var(--v3)"></i>examen (error de medida)</span></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="k">DE de las notas</span><span class="v" id="v-sd">–</span><span class="t">en los pasos 1 a 7, 1,5</span></div>
+        <div class="stat"><span class="k">Fiabilidad</span><span class="v" id="v-rel">–</span><span class="t">σ<sub>niv</sub>² / DE²</span></div>
+        <div class="stat"><span class="k">d observable del efecto elegido</span><span class="v" id="v-d">–</span><span class="t" id="v-dt"></span></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>2.000 experimentos simulados con este examen</h3><button class="btn" id="btn-vsim" type="button">Repetir la simulación</button></div>
+        <div class="stats">
+          <div class="stat"><span class="k">Con p &lt; 0,05 si el método no hace nada</span><span class="v" id="v-fp">–</span><span class="t" id="v-fpt"></span></div>
+          <div class="stat"><span class="k">Con p &lt; 0,05 con el efecto elegido</span><span class="v" id="v-pow">–</span><span class="t" id="v-powt"></span></div>
+        </div>
+        <p class="note">t de Welch, con n estudiantes por grupo y el efecto de la barra de arriba. En este paso, nivel, día y error se simulan con distribuciones normales.</p>
+      </div>
+      <p id="v-msg"></p>
+    </div>
+  </section>
+  <hr class="sep">
+
+  <!-- PASO 9 -->
+  <section class="step" id="paso9">
+    <div class="explain">
+      <span class="step-tag">Paso 9 · Error de medida</span>
+      <h2>Un estudiante frente a la media de un grupo</h2>
+      <p>El error de medida pesa muy distinto según la pregunta. No es lo mismo preguntar si ha cambiado un estudiante concreto que preguntar si difieren las medias de dos grupos. Las fuentes de variabilidad son las del paso 8.</p>
+      <p>Para decidir si <b>un estudiante concreto</b> ha mejorado, hay que compararse con el error de medida. Su <b>error típico de medida</b> (ETM) es la DE de las notas que sacaría si lo examináramos muchas veces sin que cambiara su nivel, ETM = √(σ<sub>día</sub>²/m + σ<sub>err</sub>²/(k·m)). La diferencia entre dos notas suyas tiene una DE de ETM × √2 (las varianzas se suman, como en el paso 3), así que un cambio tiene que superar 1,96 × √2 × ETM ≈ 2,8 × ETM para descartar el azar con un 95 % de confianza. Es el <b>cambio mínimo detectable</b>. <span id="t8-cmd"></span></p>
+      <p>Para la <b>media de un grupo</b>, el error de medida se reduce con √n, igual que el resto de la variabilidad, y ya lo tiene en cuenta el error típico de la diferencia de medias. Por eso un efecto medio más pequeño que el error de una sola medida se puede detectar, siempre que ese error sea aleatorio. <span id="t8-se"></span></p>
+      <p class="muted">Con los tiempos de reacción pasa lo mismo. Un teclado corriente puede añadir a cada pulsación un error del orden de varios milisegundos, a veces más de 10, y aun así una diferencia media de 10 ms puede detectarse al promediar muchos ensayos y muchas personas. El peligro aparece si el retraso medio es distinto en las dos condiciones, por ejemplo si cada condición se pasa con un ordenador distinto.</p>
+    </div>
+    <div class="card">
+      <div class="ctl">
+        <span class="ctl-label" id="lbl-k2">Preguntas por examen (k)</span>
+        <div class="seg" id="seg-k2" role="group" aria-labelledby="lbl-k2"></div>
+      </div>
+      <div class="ctl">
+        <span class="ctl-label" id="lbl-m2">Exámenes que se promedian (m)</span>
+        <div class="seg" id="seg-m2" role="group" aria-labelledby="lbl-m2"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Examinar muchas veces sin que cambie el nivel</h3></div>
+        <canvas id="c-same" class="h200" aria-label="Notas de un mismo estudiante y medias de una misma clase en 40 exámenes posibles"></canvas>
+        <div class="legend"><span>Cada punto es un examen posible. El corchete marca el 95 % de las notas, ± 1,96 DE.</span></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="k">Error típico de medida (ETM)</span><span class="v" id="v-etm">–</span><span class="t">√(σ<sub>día</sub>²/m + σ<sub>err</sub>²/(k·m))</span></div>
+        <div class="stat"><span class="k">Cambio mínimo detectable, un estudiante</span><span class="v" id="v-cmd">–</span><span class="t" id="v-cmdt"></span></div>
+        <div class="stat"><span class="k">Error típico de la diferencia de medias</span><span class="v" id="v-sem">–</span><span class="t" id="v-semt"></span></div>
+      </div>
+    </div>
+  </section>
+  <hr class="sep">
+
+  <!-- PASO 10 -->
+  <section id="paso10" style="display:flex;flex-direction:column;gap:20px;scroll-margin-top:120px">
+    <span class="step-tag">Paso 10 · Todo junto</span>
+    <h2>El camino completo</h2>
+    <div class="chain">
+      <div class="link"><span class="n">1 · Datos</span><span class="q">¿Cuánto cambia, en sus unidades?</span><span class="a">La diferencia entre medias en puntos de nota.</span></div>
+      <div class="link"><span class="n">2 · d de Cohen</span><span class="q">¿Es mucho o poco?</span><span class="a">La diferencia dividida por la desviación típica.</span></div>
+      <div class="link"><span class="n">3 · Probabilidad de superioridad</span><span class="q">¿Qué significa para un estudiante?</span><span class="a" id="t8-ps"></span></div>
+      <div class="link"><span class="n">4 · Teorema central del límite</span><span class="q">¿Cuánto podría variar mi resultado?</span><span class="a">Las diferencias forman una campana con anchura DE × √(2/n).</span></div>
+      <div class="link"><span class="n">5 · Valor p</span><span class="q">¿Lo explicaría el azar?</span><span class="a">La proporción de mezclas tan extremas como mis datos.</span></div>
+      <div class="link"><span class="n">8 · Variabilidad</span><span class="q">¿De dónde sale la DE?</span><span class="a">Del nivel de cada estudiante, de cómo rinde cada día y del error del examen.</span></div>
+      <div class="link"><span class="n">9 · Error de medida</span><span class="q">¿Ha cambiado este estudiante?</span><span class="a">Solo si supera el cambio mínimo detectable, unas 2,8 veces el ETM. Para las medias, el error se reduce con √n.</span></div>
+    </div>
+    <div class="card">
+      <h3>Lo que la p dice, y lo que no</h3>
+      <ul class="clean">
+        <li>La p es una proporción. <span>De todas las mezclas, la parte que da una diferencia tan grande como la tuya o mayor, en cualquier dirección.</span></li>
+        <li>No es la probabilidad de que tu resultado se deba al azar. <span>Es la probabilidad de un resultado así suponiendo que la condición no importa, que es otra cosa.</span></li>
+        <li>No dice cuánto vale el efecto ni si importa. <span>Para eso están la diferencia en puntos, la d y la probabilidad de superioridad.</span></li>
+        <li>p &lt; 0,05 no significa “es real”. <span>Sin ningún efecto, uno de cada veinte experimentos sale significativo igualmente (paso 6).</span></li>
+        <li>p ≥ 0,05 no significa “no hay efecto”. <span>Con pocos estudiantes y un efecto pequeño, lo normal es no detectarlo.</span></li>
+        <li>El diseño importa tanto como la n. <span>Medir a los mismos estudiantes en las dos condiciones puede estrechar mucho la campana (paso 7).</span></li>
+        <li>El error de medida aleatorio esconde efectos, no los inventa. <span>Ensancha la DE y quita potencia. Lo que inventa efectos es un error sistemático que afecta más a un grupo que a otro (paso 8).</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>Datos simulados en tu navegador. Notas de 0 a 10, asimétricas (con una cola de notas bajas), con el método habitual de media 6 y desviación típica 1,5; el método nuevo las desplaza en la cantidad elegida. Los métodos y los tamaños del efecto son hipotéticos, y la lección no afirma que ningún método concreto funcione. Cada pulsación da resultados algo distintos.</footer>
+</div>
+
+<script>
+(() => {
+  // ---------- utilidades ----------
+  const $ = id => document.getElementById(id);
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const fmt = (v, d = 1) => Number.isFinite(v) ? v.toLocaleString('es-ES', { minimumFractionDigits: d, maximumFractionDigits: d }) : '–';
+  const pct = (v, d = 0) => Number.isFinite(v) ? (v * 100).toLocaleString('es-ES', { minimumFractionDigits: d, maximumFractionDigits: d }) + ' %' : '–';
+  const fmtP = p => p < 0.001 ? '< 0,001' : p.toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+  const gauss = () => { let u = 0; while (u === 0) u = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random()); };
+  const mean = a => a.reduce((s, x) => s + x, 0) / a.length;
+  const variance = a => { const m = mean(a); return a.reduce((s, x) => s + (x - m) ** 2, 0) / (a.length - 1); };
+  const npdf = (x, m, s) => Math.exp(-0.5 * ((x - m) / s) ** 2) / (s * Math.sqrt(2 * Math.PI));
+  function Phi(z) { // Abramowitz y Stegun 7.1.26
+    const t = 1 / (1 + 0.3275911 * Math.abs(z) / Math.SQRT2);
+    const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z / 2);
+    return z >= 0 ? (1 + y) / 2 : (1 - y) / 2;
+  }
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Distribución t
+  function lgamma(x) {
+    const c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+    let y = x, t = x + 5.5; t -= (x + 0.5) * Math.log(t); let s = 1.000000000190015;
+    for (const ci of c) s += ci / ++y;
+    return -t + Math.log(2.5066282746310005 * s / x);
+  }
+  function betacf(a, b, x) {
+    let qab = a + b, qap = a + 1, qam = a - 1, c = 1, d = 1 - qab * x / qap;
+    if (Math.abs(d) < 1e-30) d = 1e-30; d = 1 / d; let h = d;
+    for (let m = 1; m <= 200; m++) {
+      const m2 = 2 * m; let aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+      d = 1 + aa * d; if (Math.abs(d) < 1e-30) d = 1e-30; c = 1 + aa / c; if (Math.abs(c) < 1e-30) c = 1e-30; d = 1 / d; h *= d * c;
+      aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+      d = 1 + aa * d; if (Math.abs(d) < 1e-30) d = 1e-30; c = 1 + aa / c; if (Math.abs(c) < 1e-30) c = 1e-30; d = 1 / d;
+      const del = d * c; h *= del; if (Math.abs(del - 1) < 3e-9) break;
+    }
+    return h;
+  }
+  function ibeta(x, a, b) {
+    if (x <= 0) return 0; if (x >= 1) return 1;
+    const bt = Math.exp(lgamma(a + b) - lgamma(a) - lgamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+    return x < (a + 1) / (a + b + 2) ? bt * betacf(a, b, x) / a : 1 - bt * betacf(b, a, 1 - x) / b;
+  }
+  const tTwoSided = (t, df) => ibeta(df / (df + t * t), df / 2, 0.5);
+  const tpdf = (t, df) => Math.exp(lgamma((df + 1) / 2) - lgamma(df / 2) - 0.5 * Math.log(df * Math.PI) - (df + 1) / 2 * Math.log(1 + t * t / df));
+
+  // ---------- estado ----------
+  const MU = 6, SD = 1.5;
+  // Notas asimétricas, con una cola de notas bajas: ex-Gaussiana (normal + exponencial) reflejada; media 0 y DE 1,5 antes de sumar la media
+  const SIG_N = 1, TAU = Math.sqrt(SD * SD - SIG_N * SIG_N);
+  const exg = () => -(SIG_N * gauss() - TAU * Math.log(1 - Math.random()) - TAU);
+  const clip = x => Math.min(10, Math.max(0, x)); // las notas van de 0 a 10
+  const EF = [{ d: 0, l: '0 puntos · d = 0' }, { d: 0.2, l: '0,3 puntos · d = 0,2' }, { d: 0.5, l: '0,75 puntos · d = 0,5' }, { d: 0.8, l: '1,2 puntos · d = 0,8' }];
+  const NS = [10, 30, 100];
+  const RS = [0, 0.5, 0.8];
+  const st = { d: 0.2, n: 30, r: 0.8 };
+  const delta = () => st.d * SD;
+
+  // Experimento entre grupos
+  function newBetween() {
+    const n = st.n;
+    st.A = Array.from({ length: n }, () => clip(MU + exg()));
+    st.B = Array.from({ length: n }, () => clip(MU + delta() + exg()));
+    st.all = st.A.concat(st.B); st.total = st.all.reduce((s, x) => s + x, 0);
+    st.obs = mean(st.B) - mean(st.A);
+    st.sp = Math.sqrt((variance(st.A) + variance(st.B)) / 2);
+    const se = st.sp * Math.sqrt(2 / n), half = Math.max(4.2 * se, Math.abs(st.obs) * 1.25);
+    st.nlo = -half; st.nhi = half; st.nb = 61; st.nw = (st.nhi - st.nlo) / st.nb;
+    const mn = Math.min(...st.all), mx = Math.max(...st.all), pad = (mx - mn) * 0.06;
+    st.xlo = mn - pad; st.xhi = mx + pad;
+    st.jit = st.all.map((_, i) => (((i * 7919) % 101) / 100 - 0.5));
+    clearMixes(); clearPairs();
+  }
+  function clearMixes() {
+    st.bins = new Array(st.nb).fill(0); st.R = 0; st.b = 0;
+    st.mix = st.all.map((_, i) => i < st.n ? 0 : 1); st.mixPrev = st.mix.slice(); st.mixDiff = NaN; st.anim = 1;
+  }
+  // Una mezcla: n estudiantes al azar a la fila A, el resto a B; devuelve media(B) − media(A)
+  const idx = [];
+  function permDiff(all, total, n, labels) {
+    const N = all.length;
+    if (idx.length !== N) { idx.length = 0; for (let i = 0; i < N; i++) idx.push(i); }
+    let sA = 0;
+    for (let i = 0; i < n; i++) { const j = i + Math.floor(Math.random() * (N - i)); const t = idx[i]; idx[i] = idx[j]; idx[j] = t; sA += all[idx[i]]; }
+    if (labels) for (let i = 0; i < N; i++) labels[idx[i]] = i < n ? 0 : 1;
+    return (total - sA) / (N - n) - sA / n;
+  }
+  function addMixes(k) {
+    const ao = Math.abs(st.obs) - 1e-9;
+    for (let r = 0; r < k; r++) {
+      const last = r === k - 1; let lab = null;
+      if (last) { st.mixPrev = st.mix.slice(); lab = new Array(st.all.length); }
+      const d = permDiff(st.all, st.total, st.n, lab);
+      st.R++; if (Math.abs(d) >= ao) st.b++;
+      const bi = Math.floor((d - st.nlo) / st.nw); if (bi >= 0 && bi < st.nb) st.bins[bi]++;
+      if (last) { st.mix = lab; st.mixDiff = d; }
+    }
+  }
+  function welch(A, B) {
+    const va = variance(A), vb = variance(B), na = A.length, nb = B.length;
+    const se = Math.sqrt(va / na + vb / nb), t = (mean(A) - mean(B)) / se;
+    const df = (va / na + vb / nb) ** 2 / ((va / na) ** 2 / (na - 1) + (vb / nb) ** 2 / (nb - 1));
+    return { t, df, se, p: tTwoSided(t, df) };
+  }
+
+  // PS de la población, por simulación (las notas no son normales)
+  const psCache = {};
+  function popPS(k) { // P(e2 − e1 < k), con e1, e2 independientes y con la forma de las notas
+    if (psCache[k] === undefined) { let w = 0; const M = 200000; for (let i = 0; i < M; i++) if (exg() - exg() < k) w++; psCache[k] = w / M; }
+    return psCache[k];
+  }
+  const popPSb = () => popPS(delta());
+  const popPSw = () => popPS(delta() / Math.sqrt(1 - st.r));
+
+  // Parejas (paso 3)
+  function clearPairs() { st.pw = 0; st.pt = 0; st.ptrace = []; st.lastPair = null; }
+  function drawPairs(k) {
+    for (let i = 0; i < k; i++) {
+      const a = st.A[Math.floor(Math.random() * st.n)], b = st.B[Math.floor(Math.random() * st.n)];
+      st.pt++; if (b > a) st.pw++; st.lastPair = [a, b];
+      if (st.ptrace.length < 2000) st.ptrace.push(st.pw / st.pt);
+    }
+  }
+  function allPairsPS() { let w = 0; for (const a of st.A) for (const b of st.B) if (b > a) w++; return w / (st.n * st.n); }
+
+  // Repeticiones (paso 4)
+  function clearCLT() {
+    const se = SD * Math.sqrt(2 / st.n);
+    st.clo = delta() - 4.5 * se; st.chi = delta() + 4.5 * se; st.cnb = 50; st.cw = (st.chi - st.clo) / st.cnb;
+    st.cbins = new Array(st.cnb).fill(0); st.ck = 0; st.cm = 0; st.cm2 = 0; st.cneg = 0;
+  }
+  function addCLT(k) {
+    for (let r = 0; r < k; r++) {
+      let sa = 0, sb = 0;
+      for (let i = 0; i < st.n; i++) { sa += clip(MU + exg()); sb += clip(MU + delta() + exg()); }
+      const d = (sb - sa) / st.n;
+      st.ck++; const e = d - st.cm; st.cm += e / st.ck; st.cm2 += e * (d - st.cm); if (d <= 0) st.cneg++;
+      const bi = Math.floor((d - st.clo) / st.cw); if (bi >= 0 && bi < st.cnb) st.cbins[bi]++;
+    }
+  }
+
+  // Experimentos repetidos con su p (paso 6)
+  st.reps = [];
+  function runOneRep() {
+    const n = st.n, A = Array.from({ length: n }, () => clip(MU + exg())), B = Array.from({ length: n }, () => clip(MU + delta() + exg()));
+    const all = A.concat(B), total = all.reduce((s, x) => s + x, 0), obs = mean(B) - mean(A), ao = Math.abs(obs) - 1e-9;
+    let b = 0; const K = 2000;
+    for (let r = 0; r < K; r++) if (Math.abs(permDiff(all, total, n, null)) >= ao) b++;
+    st.reps.push({ p: (b + 1) / (K + 1), obs });
+  }
+  let repBusy = false;
+  function runReps(k) {
+    if (repBusy) return; repBusy = true; let left = k;
+    const step = () => { const c = Math.min(left, st.n >= 100 ? 3 : 8); for (let i = 0; i < c; i++) runOneRep(); left -= c; drawReps(); if (left > 0) requestAnimationFrame(step); else repBusy = false; };
+    step();
+  }
+
+  // Intrasujeto (paso 7)
+  function newWithin() {
+    const n = st.n, r = st.r;
+    st.WA = []; st.WB = [];
+    for (let i = 0; i < n; i++) {
+      const z = gauss();
+      st.WA.push(clip(MU + SD * Math.sqrt(r) * z + Math.sqrt(1 - r) * exg()));
+      st.WB.push(clip(MU + delta() + SD * Math.sqrt(r) * z + Math.sqrt(1 - r) * exg()));
+    }
+    st.WD = st.WB.map((b, i) => b - st.WA[i]);
+    st.wm = mean(st.WD); st.wsd = Math.sqrt(variance(st.WD));
+    const half = Math.max(4.2 * st.wsd / Math.sqrt(n), Math.abs(st.wm) * 1.25);
+    st.wlo = -half; st.whi = half; st.wnb = 61; st.ww = (st.whi - st.wlo) / st.wnb;
+    st.wbins = new Array(st.wnb).fill(0); st.wR = 0; st.wb = 0; st.wflip = null; st.wflipMean = NaN;
+  }
+  function addFlips(k) {
+    const ao = Math.abs(st.wm) - 1e-9, n = st.n;
+    for (let r = 0; r < k; r++) {
+      const last = r === k - 1; let s = 0; const signs = last ? [] : null;
+      for (let i = 0; i < n; i++) { const sg = Math.random() < 0.5 ? -1 : 1; s += sg * st.WD[i]; if (last) signs.push(sg); }
+      const m = s / n; st.wR++; if (Math.abs(m) >= ao) st.wb++;
+      const bi = Math.floor((m - st.wlo) / st.ww); if (bi >= 0 && bi < st.wnb) st.wbins[bi]++;
+      if (last) { st.wflip = signs; st.wflipMean = m; }
+    }
+  }
+
+  // ---------- dibujo ----------
+  function prep(cv) {
+    const r = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+    if (cv.width !== Math.round(w * r) || cv.height !== Math.round(h * r)) { cv.width = Math.round(w * r); cv.height = Math.round(h * r); }
+    const ctx = cv.getContext('2d'); ctx.setTransform(r, 0, 0, r, 0, 0); ctx.clearRect(0, 0, w, h);
+    return { ctx, w, h };
+  }
+  const L = 34, Rr = 14;
+  function niceStep(span, target) { const raw = span / target, p = 10 ** Math.floor(Math.log10(raw)), m = raw / p; return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p; }
+  function xAxis(ctx, w, base, lo, hi, target, unit) {
+    const X = v => L + (v - lo) / (hi - lo) * (w - L - Rr);
+    const step = niceStep(hi - lo, target);
+    ctx.strokeStyle = css('--line'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, base + 0.5); ctx.lineTo(w - Rr, base + 0.5); ctx.stroke();
+    ctx.fillStyle = css('--muted'); ctx.font = '12px ' + css('--f-mono'); ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let t = Math.ceil(lo / step) * step; t <= hi + 1e-9; t += step) {
+      const x = X(t); ctx.beginPath(); ctx.moveTo(x + 0.5, base); ctx.lineTo(x + 0.5, base + 4); ctx.stroke(); ctx.fillText(fmt(Math.abs(t) < step / 1e6 ? 0 : t, step < 1 ? 1 : 0), x, base + 6);
+    }
+    if (unit) { ctx.textAlign = 'right'; ctx.fillText(unit, w - Rr, base + 6 + 14); }
+    return X;
+  }
+  function vline(ctx, x, y0, y1, color, width, dash) {
+    ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = width; if (dash) ctx.setLineDash(dash);
+    ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, y0); ctx.lineTo(Math.round(x) + 0.5, y1); ctx.stroke(); ctx.restore();
+  }
+  function emptyMsg(ctx, w, y, text) { ctx.fillStyle = css('--muted'); ctx.font = '15px ' + css('--f-body'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, w / 2, y); }
+
+  // Filas de puntos (pasos 1 y 5)
+  function drawRows(cv, labels, prevLabels, t, colorByOrigin) {
+    const { ctx, w, h } = prep(cv); const base = h - 34;
+    const X = xAxis(ctx, w, base, st.xlo, st.xhi, 7, 'nota');
+    const rowY = g => g === 0 ? base * 0.28 : base * 0.74;
+    ctx.font = '700 13px ' + css('--f-body'); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = css('--a'); ctx.fillText('A', 8, rowY(0)); ctx.fillStyle = css('--b'); ctx.fillText('B', 8, rowY(1));
+    const r = st.n >= 100 ? 3.4 : st.n >= 30 ? 4.6 : 6;
+    const ease = x => x < 0.5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2;
+    const e = ease(t), spread = base * 0.16;
+    st.all.forEach((x, i) => {
+      const y0 = rowY(prevLabels[i]), y1 = rowY(labels[i]), y = y0 + (y1 - y0) * e + st.jit[i] * spread;
+      ctx.fillStyle = (colorByOrigin ? i < st.n : labels[i] === 0) ? css('--a') : css('--b');
+      ctx.globalAlpha = 0.78; ctx.beginPath(); ctx.arc(X(x), y, r, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    if (t >= 1) [0, 1].forEach(g => {
+      const m = mean(st.all.filter((_, i) => labels[i] === g)), y = rowY(g);
+      vline(ctx, X(m), y - spread - 8, y + spread + 8, colorByOrigin ? css('--ink') : (g === 0 ? css('--a') : css('--b')), 3);
+    });
+  }
+
+  // Paso 2: curvas y regla
+  function drawD() {
+    const { ctx, w, h } = prep($('c-d'));
+    const ma = mean(st.A), mb = mean(st.B), sp = st.sp;
+    const lo = Math.min(ma, mb) - 3.2 * sp, hi = Math.max(ma, mb) + 3.2 * sp;
+    const base = h - 96, top = 10;
+    const X = xAxis(ctx, w, base, lo, hi, 7, 'nota');
+    // forma suavizada de los datos (densidad de núcleo), no una normal
+    const kde = data => { const h = 1.06 * Math.sqrt(variance(data)) * data.length ** -0.2; return x => data.reduce((s, v) => s + npdf(x, v, h), 0) / data.length; };
+    const curves = [[st.A, ma, '--a'], [st.B, mb, '--b']].map(([dat, m, c]) => { const f = kde(dat); return { m, c, pts: Array.from({ length: 201 }, (_, i) => { const x = lo + (hi - lo) * i / 200; return [x, f(x)]; }) }; });
+    const peak = Math.max(...curves.flatMap(cu => cu.pts.map(p => p[1]))), Y = y => base - y / peak * (base - top - 6);
+    curves.forEach(({ m, c, pts }) => {
+      ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)));
+      ctx.lineTo(X(hi), base); ctx.lineTo(X(lo), base); ctx.closePath();
+      ctx.globalAlpha = 0.16; ctx.fillStyle = css(c); ctx.fill(); ctx.globalAlpha = 1;
+      ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)));
+      ctx.strokeStyle = css(c); ctx.lineWidth = 2.2; ctx.stroke();
+      vline(ctx, X(m), top, base, css(c), 2, [4, 4]);
+    });
+    // regla: diferencia y una DE, con la misma escala
+    const y1 = base + 40, y2 = base + 70, x0 = X(Math.min(ma, mb));
+    const bar = (y, len, color, label) => {
+      ctx.fillStyle = color; ctx.fillRect(x0, y - 6, Math.max(2, X(Math.min(ma, mb) + len) - x0), 12);
+      ctx.fillStyle = css('--ink'); ctx.font = '600 13px ' + css('--f-mono'); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      const xe = X(Math.min(ma, mb) + len) + 8; const txtW = ctx.measureText(label).width;
+      if (xe + txtW < w - 4) ctx.fillText(label, xe, y); else { ctx.textAlign = 'right'; ctx.fillText(label, x0 - 8, y); }
+    };
+    bar(y1, Math.abs(ma - mb), css('--tail'), `diferencia ${fmt(Math.abs(ma - mb), 2)} puntos`);
+    bar(y2, sp, css('--muted'), `1 DE = ${fmt(sp, 2)} puntos`);
+  }
+
+  // Paso 3
+  function drawPS() {
+    const { ctx, w, h } = prep($('c-ps')); const base = h - 22, top = 10;
+    const Y = p => base - p * (base - top);
+    ctx.strokeStyle = css('--line'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, base + 0.5); ctx.lineTo(w - Rr, base + 0.5); ctx.stroke();
+    ctx.fillStyle = css('--muted'); ctx.font = '11px ' + css('--f-mono'); ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    [0, 0.5, 1].forEach(p => { ctx.fillText(pct(p), L - 4, Y(p)); });
+    ctx.save(); ctx.setLineDash([3, 4]); ctx.strokeStyle = css('--line'); ctx.beginPath(); ctx.moveTo(L, Y(0.5) + 0.5); ctx.lineTo(w - Rr, Y(0.5) + 0.5); ctx.stroke(); ctx.restore();
+    const psAll = allPairsPS();
+    ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = css('--ok'); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(L, Y(psAll)); ctx.lineTo(w - Rr, Y(psAll)); ctx.stroke(); ctx.restore();
+    if (st.ptrace.length) {
+      const N = Math.max(50, st.ptrace.length), X = i => L + i / (N - 1) * (w - L - Rr);
+      ctx.beginPath(); st.ptrace.forEach((p, i) => i ? ctx.lineTo(X(i), Y(p)) : ctx.moveTo(X(i), Y(p)));
+      ctx.strokeStyle = css('--b'); ctx.lineWidth = 2.2; ctx.stroke();
+    } else emptyMsg(ctx, w, (top + base) / 2 - 18, 'Elige parejas y mira cómo se acerca a la línea verde');
+    ctx.fillStyle = css('--muted'); ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.font = '11px ' + css('--f-mono');
+    ctx.fillText('proporción acumulada de parejas ganadas por B; en verde, todas las parejas posibles', L, base + 6);
+  }
+
+  // Repaso: estaturas
+  function drawHeight() {
+    const H = +$('rng-h').value, M = 175, S = 7, z = (H - M) / S;
+    const { ctx, w, h } = prep($('c-height')); const top = 56, base = h - 52, lo = M - 4 * S, hi = M + 4 * S;
+    const X = v => L + (v - lo) / (hi - lo) * (w - L - Rr), Y = y => base - y / npdf(M, M, S) * (base - top);
+    // área por debajo
+    ctx.beginPath(); ctx.moveTo(X(lo), base);
+    for (let i = 0; i <= 150; i++) { const x = lo + (H - lo) * i / 150; ctx.lineTo(X(x), Y(npdf(x, M, S))); }
+    ctx.lineTo(X(H), base); ctx.closePath(); ctx.globalAlpha = 0.4; ctx.fillStyle = css('--ok'); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.beginPath(); for (let i = 0; i <= 240; i++) { const x = lo + (hi - lo) * i / 240; i ? ctx.lineTo(X(x), Y(npdf(x, M, S))) : ctx.moveTo(X(x), Y(npdf(x, M, S))); }
+    ctx.strokeStyle = css('--ink'); ctx.lineWidth = 2; ctx.stroke();
+    // regla del 68 % y del 95 %
+    const bracket = (k, y, label) => {
+      ctx.strokeStyle = css('--muted'); ctx.lineWidth = 1.2; ctx.beginPath();
+      ctx.moveTo(X(M - k * S), y + 5); ctx.lineTo(X(M - k * S), y); ctx.lineTo(X(M + k * S), y); ctx.lineTo(X(M + k * S), y + 5); ctx.stroke();
+      ctx.fillStyle = css('--muted'); ctx.font = '600 11px ' + css('--f-mono'); ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(label, X(M), y - 2);
+    };
+    bracket(2, 16, '95 % entre ± 2 DE'); bracket(1, 44, '68 % entre ± 1 DE');
+    // dos ejes, centímetros y z
+    ctx.strokeStyle = css('--line'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, base + 0.5); ctx.lineTo(w - Rr, base + 0.5); ctx.stroke();
+    ctx.font = '12px ' + css('--f-mono'); ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let k = -3; k <= 3; k++) {
+      const x = X(M + k * S); ctx.strokeStyle = css('--line'); ctx.beginPath(); ctx.moveTo(x + 0.5, base); ctx.lineTo(x + 0.5, base + 4); ctx.stroke();
+      ctx.fillStyle = css('--muted'); ctx.fillText(String(M + k * S), x, base + 6);
+      ctx.fillStyle = css('--tail'); ctx.fillText(String(k).replace('-', '−'), x, base + 26);
+    }
+    ctx.textAlign = 'left'; ctx.fillStyle = css('--muted'); ctx.fillText('cm', 4, base + 6); ctx.fillStyle = css('--tail'); ctx.fillText('z', 4, base + 26);
+    vline(ctx, X(H), top - 2, base, css('--ok'), 2.5);
+    const phi = Phi(z);
+    $('h-val').textContent = `${H} cm`; $('h-cm').textContent = `${H} cm`;
+    $('h-z').textContent = fmt(z, 2).replace('-', '−'); $('h-zt').textContent = `(${H} − 175) / 7`;
+    $('h-phi').textContent = pct(phi); $('h-phit').textContent = `más alto que el ${pct(phi)} de los hombres`;
+  }
+
+  // Paso 3: recuadro de Φ, con el área a la izquierda de z = d/√2 de tus datos
+  function drawPhi() {
+    const { ctx, w, h } = prep($('c-phi')); const base = h - 22, top = 16, lo = -3.2, hi = 3.2;
+    const X = v => 10 + (v - lo) / (hi - lo) * (w - 20), Y = y => base - y / npdf(0, 0, 1) * (base - top);
+    const z = Math.max(lo, Math.min(hi, (st.obs / st.sp) / Math.SQRT2));
+    ctx.beginPath(); ctx.moveTo(X(lo), base);
+    for (let i = 0; i <= 120; i++) { const x = lo + (z - lo) * i / 120; ctx.lineTo(X(x), Y(npdf(x, 0, 1))); }
+    ctx.lineTo(X(z), base); ctx.closePath(); ctx.globalAlpha = 0.45; ctx.fillStyle = css('--ok'); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.beginPath(); for (let i = 0; i <= 200; i++) { const x = lo + (hi - lo) * i / 200; i ? ctx.lineTo(X(x), Y(npdf(x, 0, 1))) : ctx.moveTo(X(x), Y(npdf(x, 0, 1))); }
+    ctx.strokeStyle = css('--ink'); ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = css('--line'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(lo), base + 0.5); ctx.lineTo(X(hi), base + 0.5); ctx.stroke();
+    ctx.fillStyle = css('--muted'); ctx.font = '11px ' + css('--f-mono'); ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let k = -3; k <= 3; k++) ctx.fillText(String(k).replace('-', '−'), X(k), base + 5);
+    vline(ctx, X(z), top - 4, base, css('--ok'), 2.5);
+    ctx.fillStyle = css('--ok'); ctx.font = '600 12px ' + css('--f-mono'); ctx.textBaseline = 'top'; ctx.textAlign = z > 0.8 ? 'right' : 'left';
+    ctx.fillText(`z = ${fmt(z, 2)}, Φ(z) = ${pct(Phi(z))}`, X(z) + (z > 0.8 ? -6 : 6), top - 8);
+  }
+
+  // Paso 3: diferencias entre dos estudiantes al azar
+  function drawPSD() {
+    const { ctx, w, h } = prep($('c-psd')); const base = h - 34, top = 12;
+    const diffs = []; for (const a of st.A) for (const b of st.B) diffs.push(b - a);
+    const sdD = st.sp * Math.SQRT2, lo = st.obs - 3.6 * sdD, hi = st.obs + 3.6 * sdD;
+    const X = xAxis(ctx, w, base, lo, hi, 8, 'nota de B − nota de A (puntos)');
+    const nb = 40, bw = (hi - lo) / nb, bins = new Array(nb).fill(0);
+    diffs.forEach(d => { const i = Math.floor((d - lo) / bw); if (i >= 0 && i < nb) bins[i]++; });
+    const dens = bins.map(c => c / (diffs.length * bw));
+    const peak = Math.max(npdf(st.obs, st.obs, sdD), ...dens), Y = y => base - y / peak * (base - top);
+    // área a la derecha de 0
+    ctx.beginPath(); ctx.moveTo(X(Math.max(0, lo)), base);
+    for (let i = 0; i <= 200; i++) { const x = Math.max(0, lo) + (hi - Math.max(0, lo)) * i / 200; ctx.lineTo(X(x), Y(npdf(x, st.obs, sdD))); }
+    ctx.lineTo(X(hi), base); ctx.closePath(); ctx.globalAlpha = 0.4; ctx.fillStyle = css('--ok'); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.fillStyle = css('--bar'); ctx.globalAlpha = 0.5;
+    dens.forEach((v, i) => { if (!v) return; const a = X(lo + i * bw), b = X(lo + (i + 1) * bw); ctx.fillRect(a + 0.5, Y(v), Math.max(1, b - a - 1), base - Y(v)); });
+    ctx.globalAlpha = 1;
+    ctx.beginPath(); for (let i = 0; i <= 200; i++) { const x = lo + (hi - lo) * i / 200; i ? ctx.lineTo(X(x), Y(npdf(x, st.obs, sdD))) : ctx.moveTo(X(x), Y(npdf(x, st.obs, sdD))); }
+    ctx.strokeStyle = css('--ink'); ctx.lineWidth = 2; ctx.stroke();
+    vline(ctx, X(0), top - 4, base, css('--ok'), 2.5);
+    ctx.fillStyle = css('--ok'); ctx.font = '600 12px ' + css('--f-mono'); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('0, empate', X(0) + 6, top - 6);
+  }
+
+  // Paso 4
+  function drawCLT() {
+    const { ctx, w, h } = prep($('c-clt')); const base = h - 34, top = 14;
+    const X = xAxis(ctx, w, base, st.clo, st.chi, 8, 'mejora (puntos)');
+    const se = SD * Math.sqrt(2 / st.n);
+    let mx = Math.max(1, ...st.cbins); if (st.ck) mx = Math.max(mx, st.ck * st.cw * npdf(delta(), delta(), se));
+    const Y = c => base - c / mx * (base - top);
+    ctx.fillStyle = css('--a'); ctx.globalAlpha = 0.7;
+    st.cbins.forEach((c, i) => { if (!c) return; const a = X(st.clo + i * st.cw), b = X(st.clo + (i + 1) * st.cw); ctx.fillRect(a + 0.5, Y(c), Math.max(1, b - a - 1), base - Y(c)); });
+    ctx.globalAlpha = 1;
+    if (st.ck) { ctx.beginPath(); for (let i = 0; i <= 300; i++) { const x = st.clo + (st.chi - st.clo) * i / 300, y = st.ck * st.cw * npdf(x, delta(), se); i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)); } ctx.strokeStyle = css('--ink'); ctx.lineWidth = 2; ctx.stroke(); }
+    vline(ctx, X(0), top, base, css('--line'), 1.5);
+    vline(ctx, X(delta()), top, base, css('--ink'), 1.5, [5, 4]);
+    if (st.obs >= st.clo && st.obs <= st.chi) {
+      vline(ctx, X(st.obs), top - 6, base, css('--tail'), 2.5);
+      ctx.fillStyle = css('--tail'); ctx.font = '600 12px ' + css('--f-mono'); ctx.textBaseline = 'top';
+      ctx.textAlign = X(st.obs) > w / 2 ? 'right' : 'left'; ctx.fillText('tu experimento', X(st.obs) + (X(st.obs) > w / 2 ? -6 : 6), top - 8);
+    }
+    if (!st.ck) emptyMsg(ctx, w, (top + base) / 2, 'Pulsa “Repetir 100” para ver la campana');
+  }
+
+  // Paso 5
+  function drawNull() {
+    const { ctx, w, h } = prep($('c-null')); const base = h - 34, top = 16;
+    const X = xAxis(ctx, w, base, st.nlo, st.nhi, 8, 'diferencia (puntos)');
+    let mx = Math.max(1, ...st.bins);
+    const showT = $('chk-t').checked && st.R > 0, wt = welch(st.A, st.B);
+    if (showT) mx = Math.max(mx, st.R * st.nw * tpdf(0, wt.df) / wt.se);
+    const Y = c => base - c / mx * (base - top), ao = Math.abs(st.obs);
+    for (let i = 0; i < st.nb; i++) {
+      if (!st.bins[i]) continue;
+      const a = st.nlo + i * st.nw, b = a + st.nw, c = (a + b) / 2, xa = X(a), xb = X(b);
+      ctx.fillStyle = Math.abs(c) >= ao ? css('--tail') : css('--bar');
+      ctx.fillRect(xa + 0.5, Y(st.bins[i]), Math.max(1, xb - xa - 1), base - Y(st.bins[i]));
+    }
+    if (showT) { ctx.beginPath(); for (let i = 0; i <= 300; i++) { const x = st.nlo + (st.nhi - st.nlo) * i / 300, y = st.R * st.nw * tpdf(x / wt.se, wt.df) / wt.se; i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)); } ctx.strokeStyle = css('--ink'); ctx.lineWidth = 2; ctx.stroke(); }
+    vline(ctx, X(st.obs), top - 6, base, css('--tail'), 2.5);
+    vline(ctx, X(-st.obs), top - 6, base, css('--tail'), 2.5, [6, 5]);
+    ctx.fillStyle = css('--tail'); ctx.font = '600 12px ' + css('--f-mono'); ctx.textBaseline = 'top';
+    const xo = X(st.obs); ctx.textAlign = st.obs >= 0 ? 'right' : 'left';
+    ctx.fillText(`tu diferencia ${fmt(st.obs, 2)}`, xo + (st.obs >= 0 ? -6 : 6), top - 10);
+    if (!st.R) emptyMsg(ctx, w, (top + base) / 2, 'Pulsa “Mezclar” para construir la distribución nula');
+  }
+
+  // Paso 6
+  function drawReps() {
+    const { ctx, w, h } = prep($('c-reps')); const base = h - 24, top = 10;
+    const Y = p => base - p * (base - top);
+    ctx.strokeStyle = css('--line'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, base + 0.5); ctx.lineTo(w - Rr, base + 0.5); ctx.stroke();
+    ctx.fillStyle = css('--muted'); ctx.font = '11px ' + css('--f-mono'); ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText('1', L - 4, Y(1)); ctx.fillText('0', L - 4, base);
+    const shown = st.reps.slice(-200), bw = (w - L - Rr) / Math.max(100, shown.length);
+    shown.forEach((r, i) => { ctx.fillStyle = r.p < 0.05 ? css('--tail') : css('--bar'); ctx.fillRect(L + i * bw, Y(r.p), Math.max(1, bw - 1), base - Y(r.p)); });
+    ctx.save(); ctx.setLineDash([4, 4]); ctx.strokeStyle = css('--tail'); ctx.beginPath(); ctx.moveTo(L, Y(0.05) + 0.5); ctx.lineTo(w - Rr, Y(0.05) + 0.5); ctx.stroke(); ctx.restore();
+    ctx.fillStyle = css('--tail'); ctx.fillText('0,05', L - 4, Y(0.05));
+    ctx.fillStyle = css('--muted'); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(shown.length < st.reps.length ? `últimos ${shown.length} experimentos` : 'cada barra, un experimento', L, base + 6);
+    if (!st.reps.length) emptyMsg(ctx, w, (top + base) / 2, 'Pulsa “Hacer 100”');
+    const k = st.reps.length, sig = st.reps.filter(r => r.p < 0.05), pos = sig.filter(r => r.obs > 0);
+    $('r-k').textContent = k.toLocaleString('es-ES');
+    $('r-sig').textContent = k ? `${sig.length} (${pct(sig.length / k)})` : '–';
+    $('r-eff').textContent = pos.length ? `${fmt(mean(pos.map(r => r.obs)), 2)} puntos` : '–';
+    const neg = sig.length - pos.length;
+    $('r-efft').textContent = `real, ${fmt(delta(), 2)} puntos; ${neg} ${neg === 1 ? 'significativo' : 'significativos'} en contra`;
+    const msg = $('r-msg');
+    if (!k) msg.textContent = 'Elige el efecto y el tamaño de los grupos en la barra de arriba y pulsa “Hacer 100”.';
+    else if (st.d === 0) msg.innerHTML = 'No hay ningún efecto, y aun así alrededor del 5 % de los experimentos sale significativo. Son <b class="kt">falsos positivos</b>.';
+    else msg.innerHTML = `Hay un efecto real de ${fmt(delta(), 2)} puntos. El porcentaje de experimentos significativos es la <b>potencia</b> de este diseño.`;
+  }
+
+  // Paso 7
+  function drawWithin() {
+    // gráfico de pendientes
+    {
+      const { ctx, w, h } = prep($('c-slope')); const top = 12, base = h - 26;
+      const vals = st.WA.concat(st.WB), mn = Math.min(...vals), mx = Math.max(...vals), pad = (mx - mn) * 0.06;
+      const lo = mn - pad, hi = mx + pad, Y = v => base - (v - lo) / (hi - lo) * (base - top);
+      const xA = L + 30 + (w - L - Rr - 60) * 0.2, xB = L + 30 + (w - L - Rr - 60) * 0.8;
+      const step = niceStep(hi - lo, 5);
+      ctx.fillStyle = css('--muted'); ctx.font = '11px ' + css('--f-mono'); ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      for (let t = Math.ceil(lo / step) * step; t <= hi; t += step) { ctx.fillText(fmt(t, step < 1 ? 1 : 0), L + 10, Y(t)); ctx.strokeStyle = css('--line'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L + 16, Math.round(Y(t)) + 0.5); ctx.lineTo(w - Rr, Math.round(Y(t)) + 0.5); ctx.stroke(); }
+      ctx.lineWidth = st.n >= 100 ? 1 : 1.6; ctx.globalAlpha = st.n >= 100 ? 0.45 : 0.75;
+      st.WA.forEach((a, i) => { const b = st.WB[i]; ctx.strokeStyle = b > a ? css('--ok') : css('--bar'); ctx.beginPath(); ctx.moveTo(xA, Y(a)); ctx.lineTo(xB, Y(b)); ctx.stroke(); });
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = css('--ink'); ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(xA, Y(mean(st.WA))); ctx.lineTo(xB, Y(mean(st.WB))); ctx.stroke();
+      ctx.font = '700 13px ' + css('--f-body'); ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillStyle = css('--a'); ctx.fillText('A, método habitual', xA, base + 6); ctx.fillStyle = css('--b'); ctx.fillText('B, método nuevo', xB, base + 6);
+      ctx.save(); ctx.translate(12, (top + base) / 2); ctx.rotate(-Math.PI / 2); ctx.fillStyle = css('--muted'); ctx.font = '11px ' + css('--f-mono'); ctx.textAlign = 'center'; ctx.fillText('nota', 0, 0); ctx.restore();
+    }
+    // diferencias y una mezcla de signos
+    {
+      const { ctx, w, h } = prep($('c-wdiff')); const base = h - 34;
+      const m = Math.max(...st.WD.map(Math.abs)) * 1.08;
+      const X = xAxis(ctx, w, base, -m, m, 8, 'mejora de cada estudiante (puntos)');
+      const y1 = base * 0.28, y2 = base * 0.74, spread = base * 0.14, r = st.n >= 100 ? 3.2 : st.n >= 30 ? 4.4 : 5.6;
+      vline(ctx, X(0), 4, base, css('--line'), 1.5);
+      ctx.font = '12px ' + css('--f-body'); ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = css('--muted');
+      st.WD.forEach((d, i) => {
+        const j = (((i * 7919) % 101) / 100 - 0.5) * spread;
+        ctx.globalAlpha = 0.8; ctx.fillStyle = d > 0 ? css('--ok') : css('--bar'); ctx.beginPath(); ctx.arc(X(d), y1 + j, r, 0, Math.PI * 2); ctx.fill();
+        if (st.wflip) { const fd = d * st.wflip[i]; ctx.fillStyle = st.wflip[i] < 0 ? css('--tail') : css('--bar'); ctx.beginPath(); ctx.arc(X(fd), y2 + j, r, 0, Math.PI * 2); ctx.fill(); }
+      });
+      ctx.globalAlpha = 1;
+      vline(ctx, X(st.wm), y1 - spread - 8, y1 + spread + 8, css('--ink'), 3);
+      if (st.wflip) vline(ctx, X(st.wflipMean), y2 - spread - 8, y2 + spread + 8, css('--ink'), 3);
+      ctx.fillStyle = css('--muted'); ctx.font = '11px ' + css('--f-mono'); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.fillText('tus diferencias', L, 2);
+      ctx.fillText(st.wflip ? 'una mezcla (en rojo, signo invertido)' : 'pulsa “Mezclar signos” para ver una mezcla', L, base * 0.5 + 2);
+    }
+    // nula intrasujeto
+    {
+      const { ctx, w, h } = prep($('c-wnull')); const base = h - 34, top = 16;
+      const X = xAxis(ctx, w, base, st.wlo, st.whi, 8, 'mejora media (puntos)');
+      let mx = Math.max(1, ...st.wbins); const Y = c => base - c / mx * (base - top), ao = Math.abs(st.wm);
+      st.wbins.forEach((c, i) => { if (!c) return; const a = st.wlo + i * st.ww, b = a + st.ww, xa = X(a), xb = X(b); ctx.fillStyle = Math.abs((a + b) / 2) >= ao ? css('--tail') : css('--bar'); ctx.fillRect(xa + 0.5, Y(c), Math.max(1, xb - xa - 1), base - Y(c)); });
+      vline(ctx, X(st.wm), top - 6, base, css('--tail'), 2.5); vline(ctx, X(-st.wm), top - 6, base, css('--tail'), 2.5, [6, 5]);
+      ctx.fillStyle = css('--tail'); ctx.font = '600 12px ' + css('--f-mono'); ctx.textBaseline = 'top'; ctx.textAlign = st.wm >= 0 ? 'right' : 'left';
+      ctx.fillText(`tu mejora media ${fmt(st.wm, 2)}`, X(st.wm) + (st.wm >= 0 ? -6 : 6), top - 10);
+      if (!st.wR) emptyMsg(ctx, w, (top + base) / 2, 'Pulsa “Mezclar 10.000” para la distribución nula intrasujeto');
+    }
+    // números
+    const n = st.n, sdav = (Math.sqrt(variance(st.WA)) + Math.sqrt(variance(st.WB))) / 2;
+    const dz = st.wm / st.wsd, dav = st.wm / sdav, improved = st.WD.filter(d => d > 0).length;
+    $('w-n').textContent = `${n} estudiantes, r = ${fmt(st.r, 1)}`;
+    $('w-mix').textContent = st.wflip ? `mezcla nº ${st.wR.toLocaleString('es-ES')}, mejora media de ${fmt(st.wflipMean, 2)} puntos` : '';
+    $('w-m').textContent = `${fmt(st.wm, 2)} puntos`;
+    $('w-d').textContent = `${fmt(dz, 2)} / ${fmt(dav, 2)}`;
+    $('w-ps').textContent = `${improved} de ${n}`;
+    $('w-pst').textContent = `${pct(improved / n)}; en la población, ${pct(popPSw())}`;
+    if (st.wR) { const p = (st.wb + 1) / (st.wR + 1); $('w-p').textContent = fmtP(p); $('w-p').style.color = p < 0.05 ? css('--tail') : ''; }
+    else { $('w-p').textContent = '–'; $('w-p').style.color = ''; }
+    const tw = st.wm / (st.wsd / Math.sqrt(n));
+    $('w-pt').textContent = `t pareada, p = ${fmtP(tTwoSided(tw, n - 1))}`;
+    const seB = SD * Math.sqrt(2 / n), seW = SD * Math.sqrt(2 * (1 - st.r) / n);
+    $('w-cmp').innerHTML = `Anchura de la campana nula (error típico en la población), <b class="mono">${fmt(seB, 2)} puntos</b> entre grupos, con ${2 * n} estudiantes, frente a <b class="mono">${fmt(seW, 2)} puntos</b> intrasujeto, con ${n}. ${st.r > 0 ? 'Con la mitad de estudiantes, la campana es más estrecha, y el mismo efecto se detecta con más facilidad.' : 'Con r = 0 no hay ventaja, porque las dos notas de un estudiante no se parecen más que las de dos estudiantes distintos.'}`;
+  }
+
+  // Fuentes de variabilidad (paso 8): nota = nivel + día + error del examen
+  const S_NIV = 1.2, S_DIA = 0.6, S_ERR = Math.sqrt(4.5); // DE entre estudiantes, de un día a otro y de una sola pregunta
+  const KS = [2, 5, 10, 40], MS = [1, 2, 4], BIASES = [0, 0.3];
+  st.k = 10; st.m = 1; st.bias = 0;
+  const varParts = () => [S_NIV ** 2, S_DIA ** 2 / st.m, S_ERR ** 2 / (st.k * st.m)];
+  function runVarSim() { // proporción de experimentos con p < 0,05 (t de Welch), sin efecto y con el efecto elegido
+    const n = st.n, [vn, vd, ve] = varParts(), sn = Math.sqrt(vn), se = Math.sqrt(vd + ve), K = 2000;
+    const sig = eff => {
+      let c = 0;
+      for (let r = 0; r < K; r++) {
+        const A = [], B = [];
+        for (let i = 0; i < n; i++) { A.push(MU + sn * gauss() + se * gauss()); B.push(MU + eff + st.bias + sn * gauss() + se * gauss()); }
+        if (welch(B, A).p < 0.05) c++;
+      }
+      return c / K;
+    };
+    st.vfp = sig(0); st.vpow = sig(delta());
+    st.vz1 = Array.from({ length: 40 }, gauss); st.vz2 = Array.from({ length: 40 }, gauss);
+  }
+
+  function drawVar() {
+    const k = st.k, m = st.m, n = st.n, [vn, vd, ve] = varParts(), tot = vn + vd + ve, de = Math.sqrt(tot), rel = vn / tot;
+    const etm = Math.sqrt(vd + ve), cmd = 1.96 * Math.SQRT2 * etm, seM = de * Math.sqrt(2 / n);
+    // barra de la varianza, a la escala del peor examen (k = 2, m = 1)
+    {
+      const { ctx, w, h } = prep($('c-var')); const maxTot = S_NIV ** 2 + S_DIA ** 2 + S_ERR ** 2 / 2;
+      const x0 = 10, W = w - 20, y = 22, bh = 36, Xv = v => x0 + v / maxTot * W;
+      let acc = 0;
+      [[vn, '--v1'], [vd, '--v2'], [ve, '--v3']].forEach(([v, c]) => { ctx.fillStyle = css(c); ctx.fillRect(Xv(acc), y, Math.max(1, Xv(acc + v) - Xv(acc) - 2), bh); acc += v; });
+      vline(ctx, Xv(SD * SD), y - 8, y + bh + 6, css('--ink'), 1.5, [4, 3]);
+      ctx.fillStyle = css('--muted'); ctx.font = '11px ' + css('--f-mono'); ctx.textBaseline = 'bottom';
+      ctx.textAlign = Xv(SD * SD) > w * 0.7 ? 'right' : 'left'; ctx.fillText('pasos 1 a 7, 2,25', Xv(SD * SD) + (Xv(SD * SD) > w * 0.7 ? -5 : 5), y - 4);
+      ctx.fillStyle = css('--ink'); ctx.font = '600 12px ' + css('--f-mono'); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.fillText(`nivel ${fmt(vn, 2)} (${pct(vn / tot)}) · día ${fmt(vd, 2)} (${pct(vd / tot)}) · examen ${fmt(ve, 2)} (${pct(ve / tot)})`, x0, y + bh + 10);
+    }
+    // el mismo estudiante y la misma clase, examinados muchas veces
+    {
+      const { ctx, w, h } = prep($('c-same')); const base = h - 34;
+      const X = xAxis(ctx, w, base, 0, 10, 10, 'nota'), T = 6.5;
+      const rows = [[base * 0.3, etm, st.vz1, 'Un estudiante con nivel verdadero de 6,5'], [base * 0.78, etm / Math.sqrt(n), st.vz2, `La media de una clase de ${n} estudiantes`]];
+      const r = 4.2;
+      rows.forEach(([y, sd, zs, lab]) => {
+        ctx.save(); ctx.strokeStyle = css('--muted'); ctx.lineWidth = 1.2; ctx.beginPath();
+        const a = X(T - 1.96 * sd), b = X(T + 1.96 * sd), yb = y - 14;
+        ctx.moveTo(a, yb + 5); ctx.lineTo(a, yb); ctx.lineTo(b, yb); ctx.lineTo(b, yb + 5); ctx.stroke(); ctx.restore();
+        ctx.fillStyle = css('--muted'); ctx.font = '11px ' + css('--f-mono'); ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+        ctx.fillText(`${lab}, ± ${fmt(1.96 * sd, 2)}`, L, yb - 4);
+        zs.forEach((z, i) => {
+          const j = (((i * 7919) % 101) / 100 - 0.5) * 10;
+          ctx.globalAlpha = 0.75; ctx.fillStyle = css('--v1'); ctx.beginPath(); ctx.arc(X(clip(T + sd * z)), y + 4 + j, r, 0, Math.PI * 2); ctx.fill();
+        });
+        ctx.globalAlpha = 1; vline(ctx, X(T), y - 8, y + 16, css('--ink'), 2);
+      });
+    }
+    // textos
+    $('f8').innerHTML = `= ${fmt(vn, 2)} + ${fmt(S_DIA ** 2, 2)}/${m} + ${fmt(S_ERR ** 2, 2)}/(${k}·${m}) = ${fmt(vn, 2)} + ${fmt(vd, 2)} + ${fmt(ve, 2)} = ${fmt(tot, 2)}, así que DE = <b>${fmt(de, 2)}</b>`;
+    $('t8-rel').textContent = `Con k = ${k} y m = ${m}, vale ${fmt(vn, 2)} / ${fmt(tot, 2)} = ${fmt(rel, 2)}. El ${pct(rel)} de la varianza de las notas refleja diferencias reales de nivel y el resto, altibajos del día y error del examen.`;
+    $('t8-cmd').textContent = `Con k = ${k} y m = ${m}, ETM = ${fmt(etm, 2)} puntos, y el cambio mínimo detectable es de ${fmt(cmd, 2)} puntos. Un estudiante que sube menos que eso entre dos exámenes puede no haber cambiado nada.`;
+    $('t8-se').textContent = `Con ${n} estudiantes por grupo, el error típico de la diferencia de medias es ${fmt(de, 2)} × √(2/${n}) = ${fmt(seM, 2)} puntos, frente a un ETM de ${fmt(etm, 2)} puntos en la nota de un solo estudiante.`;
+    $('v-de').textContent = `DE = ${fmt(de, 2)} puntos`;
+    $('v-sd').textContent = `${fmt(de, 2)} puntos`;
+    $('v-rel').textContent = fmt(rel, 2);
+    $('v-d').textContent = fmt(delta() / de, 2); $('v-dt').textContent = `${fmt(delta(), 2)} puntos / ${fmt(de, 2)}`;
+    $('v-etm').textContent = `${fmt(etm, 2)} puntos`;
+    $('v-sem').textContent = `${fmt(seM, 2)} puntos`; $('v-semt').textContent = `${fmt(de, 2)} × √(2/${n}), con ${n} por grupo`;
+    $('v-cmd').textContent = `${fmt(cmd, 2)} puntos`; $('v-cmdt').textContent = `1,96 × √2 × ETM, con ETM = ${fmt(etm, 2)}`;
+    $('v-fp').textContent = pct(st.vfp, 1); $('v-fp').style.color = st.vfp > 0.08 ? css('--tail') : '';
+    $('v-fpt').textContent = st.bias ? 'con el corrector generoso en B' : 'debería rondar el 5 %';
+    $('v-pow').textContent = pct(st.vpow, 1);
+    $('v-powt').textContent = st.d === 0 ? 'efecto de 0 puntos, igual que la izquierda' : `efecto de ${fmt(delta(), 2)} puntos${st.bias ? ', más 0,3 del corrector' : ''}`;
+    $('v-msg').innerHTML = st.bias
+      ? `<b class="kt">Con un corrector más generoso en B, el ${pct(st.vfp)} de los experimentos sale significativo aunque el método no haga nada.</b> Prueba n = 100. Con más estudiantes, el sesgo se “detecta” con más seguridad, no con menos.`
+      : 'Cambia k y m. Los falsos positivos se quedan en torno al 5 % con cualquier examen, porque el error aleatorio no inventa efectos. Lo que cambia es la potencia, porque un examen peor ensancha la DE y achica la d.';
+  }
+
+  // Textos
+  function drawText() {
+    const ma = mean(st.A), mb = mean(st.B);
+    $('s1-ma').textContent = fmt(ma, 2); $('s1-sa').textContent = `DE = ${fmt(Math.sqrt(variance(st.A)), 2)} puntos`;
+    $('s1-mb').textContent = fmt(mb, 2); $('s1-sb').textContent = `DE = ${fmt(Math.sqrt(variance(st.B)), 2)} puntos`;
+    $('s1-diff').innerHTML = `<span style="color:var(--tail)">${fmt(st.obs, 2)} puntos</span>`;
+    $('t1-pop').textContent = st.d === 0
+      ? 'Ahora mismo el método nuevo no cambia nada, con un efecto real de 0 puntos, así que cualquier diferencia que veas en tus datos es puro azar.'
+      : `Ahora mismo el método nuevo la sube ${fmt(delta(), 2)} puntos, de 6 a ${fmt(MU + delta(), 2)} (d = ${fmt(st.d, 1)}). Tus datos no darán exactamente esa cifra, porque son una muestra.`;
+    const obsAbs = fmt(Math.abs(st.obs), 2) + ' puntos';
+    $('t2-q').textContent = st.obs >= 0 ? `En tus datos, la mejora es de ${obsAbs}. ¿Es mucho o poco?` : `En tus datos, el grupo con el método nuevo sacó ${obsAbs} menos. ¿Es mucho o poco?`;
+    $('t2-ms').textContent = obsAbs;
+    const ps8 = popPSb();
+    $('t8-ps').textContent = st.d === 0 ? 'Con d = 0, el estudiante del método nuevo gana el 50 % de las veces, como una moneda.' : `Con d = ${fmt(st.d, 1)}, el estudiante del método nuevo saca más nota el ${pct(ps8)} de las veces.`;
+    const dhat = st.obs / st.sp;
+    $('f2').innerHTML = `d = ${fmt(st.obs, 2)} / ${fmt(st.sp, 2)} = <b>${fmt(dhat, 2)}</b>`;
+    const sA = Math.sqrt(variance(st.A)), sB = Math.sqrt(variance(st.B));
+    $('f2sp').innerHTML = `= √((${fmt(sA, 2)}² + ${fmt(sB, 2)}²) / 2) = √((${fmt(sA * sA, 2)} + ${fmt(sB * sB, 2)}) / 2) = <b>${fmt(st.sp, 2)} puntos</b>`;
+    $('f3').innerHTML = `con tu d = ${fmt(dhat, 2)}, PS ≈ <b>${pct(Phi(dhat / Math.SQRT2))}</b>`;
+    $('t3-d').textContent = `Tu d de ${fmt(dhat, 2)} sigue siendo abstracta.`;
+    {
+      const sdR = st.sp * Math.SQRT2, z0 = (0 - st.obs) / sdR, below = Phi(z0);
+      $('rep-use').innerHTML = `Cada pareja da una resta R de notas. Con tus datos, las R forman una campana con centro en ${fmt(st.obs, 2)} puntos y DE de ${fmt(sdR, 2)} puntos, y queremos saber qué proporción de R es mayor que 0. Convertimos el 0 a z, (0 − ${fmt(st.obs, 2)}) / ${fmt(sdR, 2)} = ${fmt(z0, 2).replace('-', '−')}. Por debajo de 0 queda Φ(${fmt(z0, 2).replace('-', '−')}) = ${pct(below)} de las parejas, y por encima el resto, <b>${pct(1 - below)}</b>. Como la campana es simétrica, es lo mismo que Φ(d/√2).`;
+    }
+    const sdD = st.sp * Math.SQRT2, z3 = st.obs / sdD;
+    const ea = st.A[0], eb = st.B[0];
+    $('dv-0').textContent = `Por ejemplo, si el estudiante de A saca un ${fmt(ea, 1)} y el de B un ${fmt(eb, 1)}, R = ${fmt(eb, 1)} − ${fmt(ea, 1)} = ${fmt(Math.round(eb * 10) / 10 - Math.round(ea * 10) / 10, 1)} puntos.`;
+    $('dv-1').textContent = `${fmt(st.obs, 2)} puntos`;
+    $('dv-2').textContent = `${fmt(st.sp, 2)} × 1,41 = ${fmt(sdD, 2)} puntos`;
+    $('dv-3').innerHTML = `Con tus datos, z = ${fmt(st.obs, 2)} / ${fmt(sdD, 2)} = ${fmt(z3, 2)}, y Φ(${fmt(z3, 2)}) = <b>${pct(Phi(z3))}</b>.`;
+    $('psd-txt').textContent = `PS ≈ ${pct(Phi(z3))}`;
+    $('pair-count').textContent = `${st.pt.toLocaleString('es-ES')} parejas`;
+    if (st.lastPair) {
+      const [a, b] = st.lastPair; $('pv-a').textContent = fmt(a, 2); $('pv-b').textContent = fmt(b, 2);
+      $('pc-a').classList.toggle('win', a > b); $('pc-b').classList.toggle('win', b > a);
+    } else { $('pv-a').textContent = '–'; $('pv-b').textContent = '–'; $('pc-a').classList.remove('win'); $('pc-b').classList.remove('win'); }
+    $('s3-emp').textContent = st.pt ? pct(st.pw / st.pt) : '–';
+    $('s3-all').textContent = pct(allPairsPS());
+    $('s3-pop').textContent = pct(popPSb()); $('s3-popt').textContent = `si fueran normales, Φ(${fmt(st.d, 1)} / √2) = ${pct(Phi(st.d / Math.SQRT2))}`;
+    // paso 4
+    const se = SD * Math.sqrt(2 / st.n);
+    $('f4').innerHTML = `= 1,5 × √(2/${st.n}) = <b>${fmt(se, 2)} puntos</b>`;
+    $('rep4-k').textContent = `${st.ck.toLocaleString('es-ES')} repeticiones`;
+    $('s4-m').textContent = st.ck ? `${fmt(st.cm, 2)} puntos` : '–'; $('s4-mt').textContent = `efecto real: ${fmt(delta(), 2)} puntos`;
+    $('s4-sd').textContent = st.ck > 1 ? `${fmt(Math.sqrt(st.cm2 / (st.ck - 1)), 2)} puntos` : '–'; $('s4-sdt').textContent = `predicho: ${fmt(se, 2)} puntos`;
+    $('s4-neg').textContent = st.ck ? pct(st.cneg / st.ck) : '–';
+    // paso 5
+    $('mix-txt').textContent = Number.isFinite(st.mixDiff) ? `mezcla nº ${st.R.toLocaleString('es-ES')}, diferencia de ${fmt(st.mixDiff, 2)} puntos` : 'todavía sin mezclar';
+    const wt = welch(st.A, st.B);
+    if (st.R) {
+      const p = (st.b + 1) / (st.R + 1), sig = p < 0.05;
+      $('p-big').textContent = 'p = ' + fmtP(p); $('p-big').classList.toggle('sig', sig);
+      $('p-count').textContent = `${st.b.toLocaleString('es-ES')} de ${st.R.toLocaleString('es-ES')} mezclas tan extremas o más. Se suma 1 arriba y abajo porque tu propio reparto es uno de los posibles.`;
+      $('p-dec').textContent = sig ? 'Con α = 0,05, rechazamos la hipótesis nula.' : 'Con α = 0,05, no rechazamos la hipótesis nula, lo que no demuestra que no haya efecto.';
+      $('reading').innerHTML = `Si el método no importara, una diferencia de <b>${fmt(Math.abs(st.obs), 2)} puntos o más</b>, en cualquier dirección, saldría en <b>${pct(p, 1)}</b> de los repartos al azar.`;
+    } else {
+      $('p-big').textContent = 'p = –'; $('p-big').classList.remove('sig'); $('p-count').textContent = 'sin mezclas todavía'; $('p-dec').textContent = '';
+      $('reading').textContent = 'La p será la proporción de mezclas que dan una diferencia tan grande como la tuya o mayor.';
+    }
+    $('t-txt').textContent = `t de Welch, t = ${fmt(wt.t, 2)}, gl = ${fmt(wt.df, 1)}, p = ${fmtP(wt.p)}`;
+    // tabla de PS
+    const rows = [[0, 'como lanzar una moneda'], [0.2, 'efecto pequeño'], [0.5, 'efecto mediano'], [0.8, 'efecto grande'], [1.2, 'muy grande']];
+    $('tbl-ps').querySelector('tbody').innerHTML = rows.map(([d, l]) => `<tr class="${d === st.d ? 'hl' : ''}"><td>${fmt(d, 1)}</td><td>${pct(Phi(d / Math.SQRT2))}</td><td style="font-family:var(--f-body)">${l}</td></tr>`).join('');
+  }
+
+  function drawAll() {
+    const lab = st.all.map((_, i) => i < st.n ? 0 : 1);
+    drawRows($('c-data'), lab, lab, 1, false);
+    drawD(); drawHeight(); drawPhi(); drawPSD(); drawPS(); drawCLT();
+    drawRows($('c-mix'), st.mix, st.mixPrev, st.anim, true);
+    drawNull(); drawReps(); drawWithin(); drawVar(); drawText();
+  }
+
+  // ---------- controles ----------
+  function makeSeg(el, items, key, label, onPick) {
+    items.forEach(v => {
+      const b = document.createElement('button'); b.type = 'button'; b.id = key + '-' + String(v.d ?? v).replace('.', '_'); b.textContent = label(v);
+      b.addEventListener('click', () => onPick(v)); el.appendChild(b);
+    });
+  }
+  function sync() {
+    document.querySelectorAll('#seg-d button').forEach(b => b.setAttribute('aria-pressed', b.id === 'd-' + String(st.d).replace('.', '_')));
+    document.querySelectorAll('#seg-n button').forEach(b => b.setAttribute('aria-pressed', b.id === 'n-' + st.n));
+    document.querySelectorAll('#seg-r button').forEach(b => b.setAttribute('aria-pressed', b.id === 'r-' + String(st.r).replace('.', '_')));
+    document.querySelectorAll('#seg-k button, #seg-k2 button').forEach(b => b.setAttribute('aria-pressed', b.id.split('-')[1] === String(st.k)));
+    document.querySelectorAll('#seg-m button, #seg-m2 button').forEach(b => b.setAttribute('aria-pressed', b.id.split('-')[1] === String(st.m)));
+    document.querySelectorAll('#seg-bias button').forEach(b => b.setAttribute('aria-pressed', b.id === 'b-' + String(st.bias).replace('.', '_')));
+  }
+  function resetAll() { newBetween(); addMixes(10000); clearCLT(); st.reps = []; newWithin(); addFlips(10000); runVarSim(); sync(); drawAll(); }
+  makeSeg($('seg-d'), EF, 'd', v => v.l, v => { st.d = v.d; resetAll(); });
+  makeSeg($('seg-n'), NS, 'n', v => String(v), v => { st.n = v; resetAll(); });
+  makeSeg($('seg-r'), RS, 'r', v => 'r = ' + fmt(v, 1), v => { st.r = v; newWithin(); addFlips(10000); sync(); drawWithin(); });
+  makeSeg($('seg-k'), KS, 'k', v => 'k = ' + v, v => { st.k = v; runVarSim(); sync(); drawVar(); });
+  makeSeg($('seg-m'), MS, 'm', v => 'm = ' + v, v => { st.m = v; runVarSim(); sync(); drawVar(); });
+  makeSeg($('seg-k2'), KS, 'k2', v => 'k = ' + v, v => { st.k = v; runVarSim(); sync(); drawVar(); });
+  makeSeg($('seg-m2'), MS, 'm2', v => 'm = ' + v, v => { st.m = v; runVarSim(); sync(); drawVar(); });
+  makeSeg($('seg-bias'), BIASES, 'b', v => v ? 'B con un corrector más generoso (+0,3)' : 'mismo corrector, a ciegas', v => { st.bias = v; runVarSim(); sync(); drawVar(); });
+
+  $('btn-new').addEventListener('click', () => { newBetween(); newWithin(); addFlips(10000); drawAll(); });
+  $('rng-h').addEventListener('input', drawHeight);
+  $('btn-p1').addEventListener('click', () => { drawPairs(1); drawPS(); drawText(); });
+  $('btn-p1k').addEventListener('click', () => { drawPairs(1000); drawPS(); drawText(); });
+  $('btn-p0').addEventListener('click', () => { clearPairs(); drawPS(); drawText(); });
+  $('btn-c1').addEventListener('click', () => { addCLT(1); drawCLT(); drawText(); });
+  $('btn-c100').addEventListener('click', () => { addCLT(100); drawCLT(); drawText(); });
+  $('btn-c1k').addEventListener('click', () => { addCLT(1000); drawCLT(); drawText(); });
+  $('btn-c0').addEventListener('click', () => { clearCLT(); drawCLT(); drawText(); });
+  $('btn-clear').addEventListener('click', () => { clearMixes(); drawAll(); });
+  $('chk-t').addEventListener('change', drawNull);
+  $('btn-m100').addEventListener('click', () => { addMixes(100); st.anim = 1; drawAll(); });
+  $('btn-m10k').addEventListener('click', () => { addMixes(10000); st.anim = 1; drawAll(); });
+  let raf = 0;
+  $('btn-m1').addEventListener('click', () => {
+    addMixes(1); cancelAnimationFrame(raf);
+    if (reduceMotion) { st.anim = 1; drawAll(); return; }
+    const t0 = performance.now(), dur = 650;
+    const frame = now => { st.anim = Math.min(1, (now - t0) / dur); drawRows($('c-mix'), st.mix, st.mixPrev, st.anim, true); if (st.anim < 1) raf = requestAnimationFrame(frame); else { drawNull(); drawText(); drawRows($('c-mix'), st.mix, st.mixPrev, 1, true); } };
+    drawNull(); drawText(); raf = requestAnimationFrame(frame);
+  });
+  $('btn-r1').addEventListener('click', () => runReps(1));
+  $('btn-r100').addEventListener('click', () => runReps(100));
+  $('btn-rclear').addEventListener('click', () => { st.reps = []; drawReps(); });
+  $('btn-w1').addEventListener('click', () => { addFlips(1); drawWithin(); });
+  $('btn-w10k').addEventListener('click', () => { addFlips(10000); drawWithin(); });
+  $('btn-wnew').addEventListener('click', () => { newWithin(); addFlips(10000); drawWithin(); });
+  $('btn-vsim').addEventListener('click', () => { runVarSim(); drawVar(); });
+
+  new ResizeObserver(drawAll).observe(document.querySelector('.wrap'));
+  try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', drawAll); } catch (e) {}
+  new MutationObserver(drawAll).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawAll);
+
+  // Estado inicial de ejemplo: 0,3 puntos de mejora (d = 0,2), 30 por grupo, mezclas y repeticiones ya hechas
+  // al cargar, un experimento típico (diferencia cerca del efecto real) para empezar la clase
+  for (let i = 0; i < 50; i++) { newBetween(); if (Math.abs(st.obs - delta()) < 0.4 * SD * Math.sqrt(2 / st.n)) break; }
+  addMixes(10000); drawPairs(200); clearCLT(); addCLT(1000); newWithin(); addFlips(10000); runVarSim(); sync(); drawAll();
+})();
+</script>
+
+</body>
+</html>
